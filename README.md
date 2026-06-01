@@ -1,19 +1,25 @@
 # AI Study Assistant
 
-An AI-powered study assistant designed to help students upload notes, generate summaries, create quizzes, and interact with an AI tutor(Current state, still be updated and created).
+AI-powered study assistant designed to help students upload notes, generate summaries, create quizzes, and interact with an AI tutor.
 
 ## Features
 
-- User Login
-- Upload Notes
-- AI Generated Summaries
-- Quiz Generator
-- AI Tutor
+* User Login
+* Upload Notes
+* Summary Generation
+* Quiz Generator
+* AI Tutor
 
-## Technologies Used
+## Technologies
 
-- HTML
-- CSS
-- JavaScript
-- SQLite
-- GitHub
+* HTML
+* CSS
+* JavaScript
+* SQLite
+* GitHub
+
+## Current Status
+
+Interface and database implementation.
+
+Backend integration and AI functionality are currently in development.
