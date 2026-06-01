@@ -7,7 +7,11 @@
 <body>
 
 <div class="sidebar">
-    <h2>Marco AI Tutor</h2>
+
+    <div class="logo-box">
+        <div class="logo-circle">M</div>
+        <h2>Marco AI Tutor</h2>
+    </div>
 
     <a href="dashboard.html">Dashboard</a>
     <a href="upload.html" class="active">Upload Notes</a>
@@ -15,26 +19,32 @@
     <a href="quiz.html">Quiz Generator</a>
     <a href="tutor.html">AI Tutor</a>
     <a href="index.html">Logout</a>
+
+    <button class="theme-toggle" onclick="toggleTheme()">
+        Toggle Theme
+    </button>
+
 </div>
 
 <div class="main">
 
-    <h1>Upload Study Material</h1>
-
-    <p class="subtitle">
-        Upload notes for AI analysis.
-    </p>
+    <div class="hero-header">
+        <h1>Upload Study Material</h1>
+        <p>Upload notes or paste content below for AI analysis.</p>
+    </div>
 
     <div class="form-card">
 
         <label>Subject / Module Name</label>
-        <input type="text"
-               placeholder="Example: Artificial Intelligence">
+
+        <input
+            type="text"
+            placeholder="Example: Artificial Intelligence">
 
         <label>Paste Notes</label>
 
         <textarea
-            placeholder="Paste lecture notes here...">
+            placeholder="Paste your lecture notes here...">
         </textarea>
 
         <label>Upload File</label>
@@ -48,6 +58,8 @@
     </div>
 
 </div>
+
+<script src="script.js"></script>
 
 </body>
 </html>

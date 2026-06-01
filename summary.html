@@ -7,7 +7,11 @@
 <body>
 
 <div class="sidebar">
-    <h2>Marco AI Tutor</h2>
+
+    <div class="logo-box">
+        <div class="logo-circle">M</div>
+        <h2>Marco AI Tutor</h2>
+    </div>
 
     <a href="dashboard.html">Dashboard</a>
     <a href="upload.html">Upload Notes</a>
@@ -15,24 +19,33 @@
     <a href="quiz.html">Quiz Generator</a>
     <a href="tutor.html">AI Tutor</a>
     <a href="index.html">Logout</a>
+
+    <button class="theme-toggle" onclick="toggleTheme()">
+        Toggle Theme
+    </button>
+
 </div>
 
 <div class="main">
 
-    <h1>Generated Summary</h1>
-
-    <p class="subtitle">
-        AI-generated summary of your uploaded notes.
-    </p>
+    <div class="hero-header">
+        <h1>Generated Summary</h1>
+        <p>Review your AI-generated study summary below.</p>
+    </div>
 
     <div class="result-box">
 
         <h3>Summary</h3>
 
         <p>
-            Your generated summary will appear here.
+            Your generated summary will appear here after processing uploaded notes.
         </p>
 
+    </div>
+
+    <div class="section-header">
+        <h2>Next Step</h2>
+        <p>Generate revision questions based on your summary.</p>
     </div>
 
     <button onclick="location.href='quiz.html'">
@@ -40,6 +53,8 @@
     </button>
 
 </div>
+
+<script src="script.js"></script>
 
 </body>
 </html>

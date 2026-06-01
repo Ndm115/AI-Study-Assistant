@@ -7,7 +7,11 @@
 <body>
 
 <div class="sidebar">
-    <h2>Marco AI Tutor</h2>
+
+    <div class="logo-box">
+        <div class="logo-circle">M</div>
+        <h2>Marco AI Tutor</h2>
+    </div>
 
     <a href="dashboard.html">Dashboard</a>
     <a href="upload.html">Upload Notes</a>
@@ -15,33 +19,41 @@
     <a href="quiz.html">Quiz Generator</a>
     <a href="tutor.html" class="active">AI Tutor</a>
     <a href="index.html">Logout</a>
+
+    <button class="theme-toggle" onclick="toggleTheme()">
+        Toggle Theme
+    </button>
+
 </div>
 
 <div class="main">
 
-    <h1>Ask Marco</h1>
-
-    <p class="subtitle">
-        Ask questions about your uploaded notes.
-    </p>
+    <div class="hero-header">
+        <h1>Ask Marco</h1>
+        <p>Your personal AI study assistant is ready to help.</p>
+    </div>
 
     <div class="result-box">
 
+        <h3>Ask a Question</h3>
+
         <input
             type="text"
-            placeholder="Ask a question about your notes">
+            placeholder="Example: What is Machine Learning?">
 
         <button>
             Ask Question
         </button>
 
         <p class="answer">
-            AI response will appear here.
+            AI responses will appear here once connected to the backend.
         </p>
 
     </div>
 
 </div>
+
+<script src="script.js"></script>
 
 </body>
 </html>
