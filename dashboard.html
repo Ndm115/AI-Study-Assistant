@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>Marco AI Tutor</h2>
+
+    <a href="dashboard.html" class="active">Dashboard</a>
+    <a href="upload.html">Upload Notes</a>
+    <a href="summary.html">Summary</a>
+    <a href="quiz.html">Quiz Generator</a>
+    <a href="tutor.html">AI Tutor</a>
+    <a href="index.html">Logout</a>
+</div>
+
+<div class="main">
+
+    <div class="hero-header">
+        <h1>Welcome Back</h1>
+        <p>Upload notes, generate summaries, create quizzes and learn with AI.</p>
+    </div>
+
+    <div class="card-grid">
+
+        <div class="card">
+            <h3>Notes Uploaded</h3>
+            <p>1</p>
+        </div>
+
+        <div class="card">
+            <h3>Summaries Generated</h3>
+            <p>0</p>
+        </div>
+
+        <div class="card">
+            <h3>Quiz Questions Generated</h3>
+            <p>0</p>
+        </div>
+
+    </div>
+
+    <div class="section-header">
+        <h2>Choose Your Study Tool</h2>
+        <p>Select a feature below to continue:</p>
+    </div>
+    
+    <div class="card-grid">
+
+        <div class="card">
+            <h3>Upload Notes</h3>
+            <p>Upload study material for AI processing.</p>
+            <button onclick="location.href='upload.html'">
+                Upload
+            </button>
+        </div>
+
+        <div class="card">
+            <h3>Generate Summary</h3>
+            <p>Create concise summaries from notes.</p>
+            <button onclick="location.href='summary.html'">
+                Summarize
+            </button>
+        </div>
+
+        <div class="card">
+            <h3>Quiz Generator</h3>
+            <p>Generate revision questions automatically.</p>
+            <button onclick="location.href='quiz.html'">
+                Create Quiz
+            </button>
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>

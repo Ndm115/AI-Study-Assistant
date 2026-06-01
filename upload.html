@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Notes</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>Marco AI Tutor</h2>
+
+    <a href="dashboard.html">Dashboard</a>
+    <a href="upload.html" class="active">Upload Notes</a>
+    <a href="summary.html">Summary</a>
+    <a href="quiz.html">Quiz Generator</a>
+    <a href="tutor.html">AI Tutor</a>
+    <a href="index.html">Logout</a>
+</div>
+
+<div class="main">
+
+    <h1>Upload Study Material</h1>
+
+    <p class="subtitle">
+        Upload notes for AI analysis.
+    </p>
+
+    <div class="form-card">
+
+        <label>Subject / Module Name</label>
+        <input type="text"
+               placeholder="Example: Artificial Intelligence">
+
+        <label>Paste Notes</label>
+
+        <textarea
+            placeholder="Paste lecture notes here...">
+        </textarea>
+
+        <label>Upload File</label>
+
+        <input type="file">
+
+        <button onclick="location.href='summary.html'">
+            Generate Summary
+        </button>
+
+    </div>
+
+</div>
+
+</body>
+</html>
