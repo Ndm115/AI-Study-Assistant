@@ -1,6 +1,6 @@
 # AI Study Assistant
 
-An AI-powered study assistant designed to help students upload notes, generate summaries, create quizzes, and interact with an AI tutor.
+An AI-powered study assistant designed to help students upload notes, generate summaries, create quizzes, and interact with an AI tutor(Current state, still be updated and created).
 
 ## Features
 
