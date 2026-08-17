@@ -15,13 +15,65 @@
             create quizzes and study smarter with AI.
         </p>
 
-        <input type="email" placeholder="Enter Email">
+        <!-- LOGIN SECTION -->
+        <div id="loginSection">
 
-        <input type="password" placeholder="Enter Password">
+            <input
+                type="email"
+                id="loginEmail"
+                placeholder="Enter Email"
+            >
 
-        <button onclick="goToDashboard()">
-            Login
-        </button>
+            <input
+                type="password"
+                id="loginPassword"
+                placeholder="Enter Password"
+            >
+
+            <button onclick="loginUser()">
+                Login
+            </button>
+
+            <p>
+                Don't have an account?
+                <a href="#" onclick="showRegister()">Register</a>
+            </p>
+
+        </div>
+
+        <!-- REGISTER SECTION -->
+        <div id="registerSection" style="display: none;">
+
+            <input
+                type="text"
+                id="registerName"
+                placeholder="Full Name"
+            >
+
+            <input
+                type="email"
+                id="registerEmail"
+                placeholder="Enter Email"
+            >
+
+            <input
+                type="password"
+                id="registerPassword"
+                placeholder="Enter Password"
+            >
+
+            <button onclick="registerUser()">
+                Register
+            </button>
+
+            <p>
+                Already have an account?
+                <a href="#" onclick="showLogin()">Login</a>
+            </p>
+
+        </div>
+
+        <p id="message"></p>
 
         <small>
             AI Powered Learning Platform

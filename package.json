@@ -1,0 +1,26 @@
+{
+  "name": "it-project",
+  "version": "1.0.0",
+  "description": "AI-powered study assistant designed to help students upload notes, generate summaries, create quizzes, and interact with an AI tutor.",
+  "main": "script.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com//Ndm115/AI-Study-Assistant.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "multer": "^2.2.0",
+    "pdf-parse": "^2.4.5",
+    "sqlite3": "^6.0.1"
+  }
+}

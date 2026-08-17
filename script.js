@@ -1,3 +1,7 @@
+// --------------------
+// NAVIGATION
+// --------------------
+
 function goToDashboard() {
     window.location.href = "dashboard.html";
 }
@@ -18,7 +22,336 @@ function goToTutor() {
     window.location.href = "tutor.html";
 }
 
+
+// --------------------
+// LOGIN / REGISTER DISPLAY
+// --------------------
+
+function showRegister() {
+
+    document.getElementById("loginSection").style.display = "none";
+    document.getElementById("registerSection").style.display = "block";
+    document.getElementById("message").textContent = "";
+}
+
+function showLogin() {
+
+    document.getElementById("registerSection").style.display = "none";
+    document.getElementById("loginSection").style.display = "block";
+    document.getElementById("message").textContent = "";
+}
+
+
+// --------------------
+// REGISTER
+// --------------------
+
+async function registerUser() {
+
+    const fullName =
+        document.getElementById("registerName").value.trim();
+
+    const email =
+        document.getElementById("registerEmail").value.trim();
+
+    const password =
+        document.getElementById("registerPassword").value;
+
+    const message =
+        document.getElementById("message");
+
+    if (!fullName || !email || !password) {
+        message.textContent = "Please complete all fields.";
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            "http://localhost:3000/register",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    fullName,
+                    email,
+                    password
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        message.textContent = data.message;
+
+        if (response.ok) {
+
+            document.getElementById("registerName").value = "";
+            document.getElementById("registerEmail").value = "";
+            document.getElementById("registerPassword").value = "";
+
+            setTimeout(() => {
+
+                showLogin();
+
+                document.getElementById("message").textContent =
+                    "Account created successfully. You can now log in.";
+
+            }, 1000);
+        }
+
+    } catch (error) {
+
+        console.error(error);
+
+        message.textContent =
+            "Could not connect to the server.";
+    }
+}
+
+
+// --------------------
+// LOGIN
+// --------------------
+
+async function loginUser() {
+
+    const email =
+        document.getElementById("loginEmail").value.trim();
+
+    const password =
+        document.getElementById("loginPassword").value;
+
+    const message =
+        document.getElementById("message");
+
+    if (!email || !password) {
+        message.textContent =
+            "Please enter your email and password.";
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            "http://localhost:3000/login",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    email,
+                    password
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            message.textContent = data.message;
+            return;
+        }
+
+        localStorage.setItem("userId", data.userId);
+        localStorage.setItem("fullName", data.fullName);
+
+        window.location.href = "dashboard.html";
+
+    } catch (error) {
+
+        console.error(error);
+
+        message.textContent =
+            "Could not connect to the server.";
+    }
+}
+
+
+// --------------------
+// SAVE STUDY MATERIAL
+// --------------------
+
+async function saveNote() {
+
+    const userId = localStorage.getItem("userId");
+
+    const moduleName =
+        document.getElementById("moduleName").value.trim();
+
+    const noteContent =
+        document.getElementById("noteContent").value.trim();
+
+    const message =
+        document.getElementById("uploadMessage");
+
+    if (!userId) {
+        window.location.href = "index.html";
+        return;
+    }
+
+    if (!moduleName || !noteContent) {
+        message.textContent =
+            "Please enter a module name and study notes.";
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            "http://localhost:3000/notes",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    userId,
+                    moduleName,
+                    noteContent
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        message.textContent = data.message;
+
+        if (response.ok) {
+
+            // Remember this note so we can use it for Gemini later
+            localStorage.setItem("currentNoteId", data.noteId);
+
+            document.getElementById("moduleName").value = "";
+            document.getElementById("noteContent").value = "";
+        }
+
+    } catch (error) {
+
+        console.error(error);
+
+        message.textContent =
+            "Could not connect to the server.";
+    }
+}
+
+// --------------------
+// FILE UPLOAD
+// --------------------
+
+async function handleFileUpload() {
+
+    const fileInput = document.getElementById("noteFile");
+    const file = fileInput.files[0];
+    const message = document.getElementById("uploadMessage");
+
+    if (!file) {
+        return;
+    }
+
+    const fileName = file.name.toLowerCase();
+
+    // TXT FILE
+    if (fileName.endsWith(".txt")) {
+
+        const reader = new FileReader();
+
+        reader.onload = function (event) {
+
+            document.getElementById("noteContent").value =
+                event.target.result;
+
+            message.textContent =
+                "TXT file loaded successfully.";
+        };
+
+        reader.onerror = function () {
+            message.textContent =
+                "Unable to read TXT file.";
+        };
+
+        reader.readAsText(file);
+
+        return;
+    }
+
+
+    // PDF FILE
+    if (fileName.endsWith(".pdf")) {
+
+        message.textContent = "Reading PDF...";
+
+        const formData = new FormData();
+
+        formData.append("pdf", file);
+
+        try {
+
+            const response = await fetch(
+                "http://localhost:3000/extract-pdf",
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                message.textContent = data.message;
+                return;
+            }
+
+            document.getElementById("noteContent").value =
+                data.text;
+
+            message.textContent =
+                "PDF loaded successfully.";
+
+        } catch (error) {
+
+            console.error(error);
+
+            message.textContent =
+                "Could not connect to the server.";
+        }
+
+        return;
+    }
+
+    message.textContent =
+        "Please upload a TXT or PDF file.";
+}
+
+// --------------------
+// LOGOUT
+// --------------------
+
+function logoutUser() {
+
+    localStorage.removeItem("userId");
+    localStorage.removeItem("fullName");
+    localStorage.removeItem("currentNoteId");
+
+    window.location.href = "index.html";
+}
+
+
+// --------------------
+// THEME
+// --------------------
+
 function toggleTheme() {
+
     document.body.classList.toggle("dark-mode");
 
     if (document.body.classList.contains("dark-mode")) {
@@ -28,8 +361,15 @@ function toggleTheme() {
     }
 }
 
+
+// --------------------
+// PAGE LOAD
+// --------------------
+
 window.onload = function () {
-    const savedTheme = localStorage.getItem("theme");
+
+    const savedTheme =
+        localStorage.getItem("theme");
 
     if (savedTheme === "dark") {
         document.body.classList.add("dark-mode");
