@@ -228,11 +228,11 @@ async function saveNote() {
 
         if (response.ok) {
 
-            // Remember this note so we can use it for Gemini later
-            localStorage.setItem("currentNoteId", data.noteId);
+          // Remember this note so we can use it for Gemini later
+          localStorage.setItem("currentNoteId", data.noteId);
 
-            document.getElementById("moduleName").value = "";
-            document.getElementById("noteContent").value = "";
+          message.textContent =
+            "Study material saved successfully!";
         }
 
     } catch (error) {
@@ -330,6 +330,127 @@ async function handleFileUpload() {
 
     message.textContent =
         "Please upload a TXT or PDF file.";
+}
+
+
+// --------------------
+// SIMPLE MARKDOWN FORMATTER
+// --------------------
+
+function formatMarkdown(text) {
+
+    return text
+        // Escape HTML first
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+
+        // Headings
+        .replace(/^### (.*$)/gm, "<h4>$1</h4>")
+        .replace(/^## (.*$)/gm, "<h3>$1</h3>")
+        .replace(/^# (.*$)/gm, "<h2>$1</h2>")
+
+        // Bold
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+
+        // Bullet points
+        .replace(/^\* (.*$)/gm, "<li>$1</li>")
+
+        // Horizontal lines
+        .replace(/^---$/gm, "<hr>")
+
+        // New lines
+        .replace(/\n/g, "<br>");
+}
+
+// --------------------
+// GENERATE AI SUMMARY
+// --------------------
+
+async function generateSummary(event) {
+
+    if (event) {
+        event.preventDefault();
+    }
+
+    const noteId = localStorage.getItem("currentNoteId");
+
+    const summaryText =
+        document.getElementById("summaryText");
+
+    const summaryMessage =
+        document.getElementById("summaryMessage");
+
+    const summaryTitle =
+        document.getElementById("summaryTitle");
+
+    if (!noteId) {
+
+        summaryMessage.textContent =
+            "Please upload and save study material first.";
+
+        return;
+    }
+
+    summaryText.textContent =
+        "Generating your summary...";
+
+    summaryMessage.textContent = "";
+
+    try {
+
+        const response = await fetch(
+            "http://localhost:3000/generate-summary",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    noteId: noteId
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+
+            summaryText.textContent =
+                "Unable to generate summary.";
+
+            summaryMessage.textContent =
+                data.message;
+
+            return;
+        }
+
+        summaryTitle.textContent =
+            data.moduleName + " Summary";
+
+        summaryText.innerHTML =
+            formatMarkdown(data.summary);
+
+        summaryMessage.textContent =
+            "Summary generated successfully.";
+
+        localStorage.setItem(
+            "currentResultId",
+            data.resultId
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        summaryText.textContent =
+            "Unable to generate summary.";
+
+        summaryMessage.textContent =
+            "Could not connect to the server.";
+    }
 }
 
 // --------------------

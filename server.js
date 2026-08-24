@@ -4,9 +4,21 @@ const sqlite3 = require("sqlite3").verbose();
 const bcrypt = require("bcrypt");
 const multer = require("multer");
 const { PDFParse } = require("pdf-parse");
+const { GoogleGenAI } = require("@google/genai");
+require("dotenv").config();
 
 const app = express();
 const PORT = 3000;
+
+
+// --------------------
+// GEMINI
+// --------------------
+
+const ai = new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY
+});
+
 
 // Keep uploaded PDF in memory temporarily
 const upload = multer({
@@ -206,6 +218,124 @@ app.post("/notes", (req, res) => {
 
 
 // --------------------
+// GENERATE AI SUMMARY
+// --------------------
+
+app.post("/generate-summary", (req, res) => {
+
+    const { noteId } = req.body;
+
+    if (!noteId) {
+        return res.status(400).json({
+            message: "No study material was selected."
+        });
+    }
+
+    const sql = `
+        SELECT *
+        FROM Notes
+        WHERE NoteID = ?
+    `;
+
+    db.get(sql, [noteId], async (err, note) => {
+
+        if (err) {
+
+            console.error("Retrieve note error:", err.message);
+
+            return res.status(500).json({
+                message: "Unable to retrieve study material."
+            });
+        }
+
+        if (!note) {
+            return res.status(404).json({
+                message: "Study material was not found."
+            });
+        }
+
+        try {
+
+            const prompt = `
+You are an AI study assistant for university students.
+
+Create a clear and useful study summary from the notes below.
+
+Keep the important facts and concepts.
+Use simple language.
+Organize the summary so that it is easy to revise from.
+Do not add information that is not contained in the student's notes.
+
+Module: ${note.ModuleName}
+
+Study Notes:
+${note.NoteContent}
+            `;
+
+            const response = await ai.models.generateContent({
+                model: "gemini-3.6-flash",
+                contents: prompt
+            });
+
+            const summary = response.text;
+
+            if (!summary) {
+                return res.status(500).json({
+                    message: "Gemini did not generate a summary."
+                });
+            }
+
+
+            // --------------------
+            // SAVE SUMMARY
+            // --------------------
+
+            const saveSql = `
+                INSERT INTO AIResults
+                (NoteID, Summary, CreatedAt)
+                VALUES (?, ?, datetime('now'))
+            `;
+
+            db.run(
+                saveSql,
+                [noteId, summary],
+                function (saveErr) {
+
+                    if (saveErr) {
+
+                        console.error(
+                            "Save summary error:",
+                            saveErr.message
+                        );
+
+                        return res.status(500).json({
+                            message:
+                                "Summary generated but could not be saved."
+                        });
+                    }
+
+                    res.json({
+                        message: "Summary generated successfully!",
+                        resultId: this.lastID,
+                        moduleName: note.ModuleName,
+                        summary: summary
+                    });
+                }
+            );
+
+        } catch (error) {
+
+            console.error("Gemini error:", error);
+
+            res.status(500).json({
+                message: "Unable to generate AI summary."
+            });
+        }
+    });
+});
+
+
+// --------------------
 // PDF TEXT EXTRACTION
 // --------------------
 
@@ -254,5 +384,14 @@ app.post("/extract-pdf", upload.single("pdf"), async (req, res) => {
 // --------------------
 
 app.listen(PORT, () => {
-    console.log(`Marco server running on http://localhost:${PORT}`);
+
+    console.log(
+        `Marco server running on http://localhost:${PORT}`
+    );
+
+    if (process.env.GEMINI_API_KEY) {
+        console.log("Gemini API key loaded successfully.");
+    } else {
+        console.log("WARNING: Gemini API key was not found.");
+    }
 });

@@ -18,7 +18,7 @@
     <a href="summary.html" class="active">Summary</a>
     <a href="quiz.html">Quiz Generator</a>
     <a href="tutor.html">AI Tutor</a>
-    <a href="index.html">Logout</a>
+    <a href="index.html" onclick="logoutUser()">Logout</a>
 
     <button class="theme-toggle" onclick="toggleTheme()">
         Toggle Theme
@@ -35,17 +35,23 @@
 
     <div class="result-box">
 
-        <h3>Summary</h3>
+        <h3 id="summaryTitle">Summary</h3>
 
-        <p>
-            Your generated summary will appear here after processing uploaded notes.
-        </p>
+        <div id="summaryText">
+            Click the button below to generate a summary from your study material.
+        </div>
+
+        <p id="summaryMessage"></p>
 
     </div>
 
+    <button type="button" onclick="generateSummary(event)">
+    Generate Summary
+    </button>
+
     <div class="section-header">
         <h2>Next Step</h2>
-        <p>Generate revision questions based on your summary.</p>
+        <p>Generate revision questions based on your study material.</p>
     </div>
 
     <button onclick="location.href='quiz.html'">
