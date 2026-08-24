@@ -228,11 +228,12 @@ async function saveNote() {
 
         if (response.ok) {
 
-          // Remember this note so we can use it for Gemini later
-          localStorage.setItem("currentNoteId", data.noteId);
+           
+            localStorage.setItem("currentNoteId", data.noteId);
+            localStorage.setItem("currentModuleName", moduleName);
 
-          message.textContent =
-            "Study material saved successfully!";
+            message.textContent =
+                "Study material saved successfully!";
         }
 
     } catch (error) {
@@ -243,6 +244,7 @@ async function saveNote() {
             "Could not connect to the server.";
     }
 }
+
 
 // --------------------
 // FILE UPLOAD
@@ -259,6 +261,7 @@ async function handleFileUpload() {
     }
 
     const fileName = file.name.toLowerCase();
+
 
     // TXT FILE
     if (fileName.endsWith(".txt")) {
@@ -345,6 +348,11 @@ function formatMarkdown(text) {
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
 
+        // Remove escaped Markdown characters
+        .replace(/\\\*/g, "*")
+        .replace(/\\\|/g, "|")
+        .replace(/\\\\/g, "\\")
+
         // Headings
         .replace(/^### (.*$)/gm, "<h4>$1</h4>")
         .replace(/^## (.*$)/gm, "<h3>$1</h3>")
@@ -362,6 +370,7 @@ function formatMarkdown(text) {
         // New lines
         .replace(/\n/g, "<br>");
 }
+
 
 // --------------------
 // GENERATE AI SUMMARY
@@ -453,6 +462,601 @@ async function generateSummary(event) {
     }
 }
 
+
+// --------------------
+// QUIZ
+// --------------------
+
+let currentQuiz = [];
+
+async function generateQuiz() {
+
+    const noteId =
+        localStorage.getItem("currentNoteId");
+
+    const quizMessage =
+        document.getElementById("quizMessage");
+
+    const quizContainer =
+        document.getElementById("quizContainer");
+
+    const quizResult =
+        document.getElementById("quizResult");
+
+    const submitButton =
+        document.getElementById("submitQuizButton");
+
+    const quizTitle =
+        document.getElementById("quizTitle");
+
+
+    if (!noteId) {
+
+        quizMessage.textContent =
+            "Please upload and save study material first.";
+
+        return;
+    }
+
+
+    quizMessage.textContent =
+        "Generating your quiz...";
+
+    quizContainer.innerHTML = "";
+    quizResult.innerHTML = "";
+    submitButton.style.display = "none";
+
+
+    try {
+
+        const response = await fetch(
+            "http://localhost:3000/generate-quiz",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    noteId: noteId
+                })
+            }
+        );
+
+        const data = await response.json();
+
+
+        if (!response.ok) {
+
+            quizMessage.textContent =
+                data.message;
+
+            return;
+        }
+
+
+        currentQuiz = data.questions;
+
+        quizTitle.textContent =
+            data.moduleName + " Quiz";
+
+        quizMessage.textContent =
+            "Choose one answer for each question.";
+
+        displayQuiz();
+
+        submitButton.style.display =
+            "inline-block";
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        quizMessage.textContent =
+            "Could not connect to the server.";
+    }
+}
+
+
+// --------------------
+// DISPLAY QUIZ
+// --------------------
+
+function displayQuiz() {
+
+    const quizContainer =
+        document.getElementById("quizContainer");
+
+    quizContainer.innerHTML = "";
+
+
+    currentQuiz.forEach((question, questionIndex) => {
+
+        const questionBox =
+            document.createElement("div");
+
+        questionBox.className =
+            "quiz-question";
+
+
+        const questionHeading =
+            document.createElement("h3");
+
+        questionHeading.textContent =
+            (questionIndex + 1) + ". " + question.question;
+
+        questionBox.appendChild(
+            questionHeading
+        );
+
+
+        question.options.forEach(
+            (option, optionIndex) => {
+
+                const label =
+                    document.createElement("label");
+
+                label.className =
+                    "quiz-option";
+
+
+                const radio =
+                    document.createElement("input");
+
+                radio.type = "radio";
+
+                radio.name =
+                    "question-" + questionIndex;
+
+                radio.value =
+                    optionIndex;
+
+
+                label.appendChild(radio);
+
+                label.appendChild(
+                    document.createTextNode(
+                        " " + option
+                    )
+                );
+
+                questionBox.appendChild(
+                    label
+                );
+
+                questionBox.appendChild(
+                    document.createElement("br")
+                );
+            }
+        );
+
+
+        quizContainer.appendChild(
+            questionBox
+        );
+    });
+}
+
+
+// --------------------
+// SUBMIT QUIZ
+// --------------------
+
+function submitQuiz() {
+
+    if (currentQuiz.length === 0) {
+        return;
+    }
+
+    let score = 0;
+    let unanswered = 0;
+
+
+    // First check that every question has an answer
+    currentQuiz.forEach(
+        (question, questionIndex) => {
+
+            const selected =
+                document.querySelector(
+                    `input[name="question-${questionIndex}"]:checked`
+                );
+
+            if (!selected) {
+                unanswered++;
+            }
+        }
+    );
+
+
+    const quizResult =
+        document.getElementById("quizResult");
+
+
+    if (unanswered > 0) {
+
+        quizResult.textContent =
+            `Please answer all questions. ${unanswered} question(s) are unanswered.`;
+
+        return;
+    }
+
+
+    // Mark each question
+    currentQuiz.forEach(
+        (question, questionIndex) => {
+
+            const selected =
+                document.querySelector(
+                    `input[name="question-${questionIndex}"]:checked`
+                );
+
+            const selectedAnswer =
+                Number(selected.value);
+
+            const questionBox =
+                document.querySelectorAll(".quiz-question")[
+                    questionIndex
+                ];
+
+
+            // Remove old feedback if quiz is submitted again
+            const oldFeedback =
+                questionBox.querySelector(".question-feedback");
+
+            if (oldFeedback) {
+                oldFeedback.remove();
+            }
+
+
+            const feedback =
+                document.createElement("p");
+
+            feedback.className =
+                "question-feedback";
+
+
+            if (
+                selectedAnswer ===
+                question.correctAnswer
+            ) {
+
+                score++;
+
+                feedback.textContent =
+                    "Correct!";
+
+                feedback.classList.add(
+                    "correct-feedback"
+                );
+
+            } else {
+
+                feedback.innerHTML =
+                    "Incorrect. Correct answer: <strong>" +
+                    question.options[
+                        question.correctAnswer
+                    ] +
+                    "</strong>";
+
+                feedback.classList.add(
+                    "incorrect-feedback"
+                );
+            }
+
+
+            questionBox.appendChild(
+                feedback
+            );
+
+
+            // Stop answers being changed after submission
+            const radioButtons =
+                questionBox.querySelectorAll(
+                    'input[type="radio"]'
+                );
+
+            radioButtons.forEach(radio => {
+                radio.disabled = true;
+            });
+        }
+    );
+
+
+    const percentage =
+        Math.round(
+            (score / currentQuiz.length) * 100
+        );
+
+
+    quizResult.innerHTML = `
+        <h2>Quiz Result</h2>
+
+        <p>
+            You scored
+            <strong>${score}/${currentQuiz.length}</strong>
+            (${percentage}%)
+        </p>
+    `;
+
+
+    // Stop the quiz being submitted twice
+    document.getElementById(
+        "submitQuizButton"
+    ).style.display = "none";
+}
+
+// --------------------
+// AI TUTOR
+// --------------------
+
+async function askTutor() {
+
+    const noteId =
+        localStorage.getItem("currentNoteId");
+
+    const questionInput =
+        document.getElementById("tutorQuestion");
+
+    const tutorMessage =
+        document.getElementById("tutorMessage");
+
+    const tutorAnswer =
+        document.getElementById("tutorAnswer");
+
+    const question =
+        questionInput.value.trim();
+
+
+    if (!noteId) {
+
+        tutorMessage.textContent =
+            "Please upload and save study material first.";
+
+        return;
+    }
+
+
+    if (!question) {
+
+        tutorMessage.textContent =
+            "Please enter a question.";
+
+        return;
+    }
+
+
+    tutorMessage.textContent =
+        "Marco is thinking...";
+
+    tutorAnswer.textContent = "";
+
+
+    try {
+
+        const response = await fetch(
+            "http://localhost:3000/ask-tutor",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    noteId: noteId,
+                    question: question
+                })
+            }
+        );
+
+
+        const data = await response.json();
+
+
+        if (!response.ok) {
+
+            tutorMessage.textContent =
+                data.message;
+
+            return;
+        }
+
+
+        tutorAnswer.innerHTML =
+            formatMarkdown(data.answer);
+
+        tutorMessage.textContent =
+            "Answer generated successfully.";
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        tutorMessage.textContent =
+            "Could not connect to the server.";
+    }
+}
+
+// --------------------
+// DASHBOARD
+// --------------------
+
+async function loadDashboard() {
+
+    const userId =
+        localStorage.getItem("userId");
+
+    const fullName =
+        localStorage.getItem("fullName");
+
+    const materialsContainer =
+        document.getElementById("studyMaterials");
+
+
+    // Only run this code on the Dashboard
+    if (!materialsContainer) {
+        return;
+    }
+
+
+    if (!userId) {
+        window.location.href = "index.html";
+        return;
+    }
+
+
+    // Show student's name
+    const welcomeMessage =
+        document.getElementById("welcomeMessage");
+
+    if (fullName) {
+        welcomeMessage.textContent =
+            "Welcome Back, " + fullName;
+    }
+
+
+    try {
+
+        const response = await fetch(
+            `http://localhost:3000/notes/${userId}`
+        );
+
+        const data = await response.json();
+
+
+        if (!response.ok) {
+
+            materialsContainer.innerHTML =
+                "<p>Unable to load study materials.</p>";
+
+            return;
+        }
+
+
+        // Dashboard counts
+        document.getElementById("notesCount").textContent =
+            data.notesCount;
+
+        document.getElementById("summaryCount").textContent =
+            data.summaryCount;
+
+
+        // Clear loading message
+        materialsContainer.innerHTML = "";
+
+
+        if (data.notes.length === 0) {
+
+            materialsContainer.innerHTML =
+                "<p>No study materials uploaded yet.</p>";
+
+            return;
+        }
+
+
+        // Create a card for every saved study material
+        data.notes.forEach(note => {
+
+            const card =
+                document.createElement("div");
+
+            card.className = "card";
+
+
+            const title =
+                document.createElement("h3");
+
+            title.textContent =
+                note.ModuleName;
+
+
+            const date =
+                document.createElement("p");
+
+            const uploadDate =
+                new Date(note.UploadDate + "Z");
+
+            date.textContent =
+                "Uploaded: " +
+                uploadDate.toLocaleDateString();
+
+
+            const button =
+                document.createElement("button");
+
+            button.type = "button";
+            button.textContent = "Study This";
+
+            button.onclick = function () {
+
+                selectStudyMaterial(
+                    note.NoteID,
+                    note.ModuleName
+                );
+            };
+
+
+            card.appendChild(title);
+            card.appendChild(date);
+            card.appendChild(button);
+
+            materialsContainer.appendChild(card);
+        });
+
+
+        // Show currently selected material
+        const currentModule =
+            localStorage.getItem("currentModuleName");
+
+        if (currentModule) {
+
+            document.getElementById(
+                "currentStudyMaterial"
+            ).textContent = currentModule;
+        }
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        materialsContainer.innerHTML =
+            "<p>Could not connect to the server.</p>";
+    }
+}
+
+
+// --------------------
+// SELECT STUDY MATERIAL
+// --------------------
+
+function selectStudyMaterial(noteId, moduleName) {
+
+    localStorage.setItem(
+        "currentNoteId",
+        noteId
+    );
+
+    localStorage.setItem(
+        "currentModuleName",
+        moduleName
+    );
+
+
+    document.getElementById(
+        "currentStudyMaterial"
+    ).textContent = moduleName;
+
+
+    alert(
+        moduleName +
+        " is now your selected study material."
+    );
+}
+
 // --------------------
 // LOGOUT
 // --------------------
@@ -462,6 +1066,8 @@ function logoutUser() {
     localStorage.removeItem("userId");
     localStorage.removeItem("fullName");
     localStorage.removeItem("currentNoteId");
+    localStorage.removeItem("currentResultId");
+    localStorage.removeItem("currentModuleName");
 
     window.location.href = "index.html";
 }
@@ -495,4 +1101,8 @@ window.onload = function () {
     if (savedTheme === "dark") {
         document.body.classList.add("dark-mode");
     }
+
+
+    // Load Dashboard information if this is dashboard.html
+    loadDashboard();
 };

@@ -18,9 +18,13 @@
     <a href="summary.html">Summary</a>
     <a href="quiz.html">Quiz Generator</a>
     <a href="tutor.html">AI Tutor</a>
-    <a href="index.html">Logout</a>
+    <a href="#" onclick="logoutUser()">Logout</a>
 
-    <button class="theme-toggle" onclick="toggleTheme()">
+    <button
+        type="button"
+        class="theme-toggle"
+        onclick="toggleTheme()"
+    >
         Toggle Theme
     </button>
 
@@ -29,28 +33,49 @@
 <div class="main">
 
     <div class="hero-header">
-        <h1>Welcome Back</h1>
+        <h1 id="welcomeMessage">Welcome Back</h1>
         <p>Upload notes, generate summaries, create quizzes and learn with AI.</p>
     </div>
+
+
+    <!-- DASHBOARD COUNTS -->
 
     <div class="card-grid">
 
         <div class="card">
             <h3>Notes Uploaded</h3>
-            <p>1</p>
+            <p id="notesCount">0</p>
         </div>
 
         <div class="card">
             <h3>Summaries Generated</h3>
-            <p>0</p>
+            <p id="summaryCount">0</p>
         </div>
 
         <div class="card">
-            <h3>Quiz Questions Generated</h3>
-            <p>0</p>
+            <h3>Current Study Material</h3>
+            <p id="currentStudyMaterial">None selected</p>
         </div>
 
     </div>
+
+
+    <!-- SAVED STUDY MATERIAL -->
+
+    <div class="section-header">
+        <h2>Your Study Materials</h2>
+        <p>Select the material you want Marco to use.</p>
+    </div>
+
+    <div
+        id="studyMaterials"
+        class="card-grid"
+    >
+        <p>Loading study materials...</p>
+    </div>
+
+
+    <!-- STUDY TOOLS -->
 
     <div class="section-header">
         <h2>Choose Your Study Tool</h2>
@@ -60,27 +85,74 @@
     <div class="card-grid">
 
         <div class="card">
+
             <h3>Upload Notes</h3>
-            <p>Upload study material for AI processing.</p>
-            <button onclick="location.href='upload.html'">
+
+            <p>
+                Upload study material for AI processing.
+            </p>
+
+            <button
+                type="button"
+                onclick="location.href='upload.html'"
+            >
                 Upload
             </button>
+
         </div>
 
+
         <div class="card">
+
             <h3>Generate Summary</h3>
-            <p>Create concise summaries from notes.</p>
-            <button onclick="location.href='summary.html'">
+
+            <p>
+                Create concise summaries from your selected notes.
+            </p>
+
+            <button
+                type="button"
+                onclick="location.href='summary.html'"
+            >
                 Summarize
             </button>
+
         </div>
 
+
         <div class="card">
+
             <h3>Quiz Generator</h3>
-            <p>Generate revision questions automatically.</p>
-            <button onclick="location.href='quiz.html'">
+
+            <p>
+                Generate revision questions from your selected notes.
+            </p>
+
+            <button
+                type="button"
+                onclick="location.href='quiz.html'"
+            >
                 Create Quiz
             </button>
+
+        </div>
+
+
+        <div class="card">
+
+            <h3>AI Tutor</h3>
+
+            <p>
+                Ask Marco questions about your selected notes.
+            </p>
+
+            <button
+                type="button"
+                onclick="location.href='tutor.html'"
+            >
+                Ask Marco
+            </button>
+
         </div>
 
     </div>

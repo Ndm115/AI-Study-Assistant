@@ -18,9 +18,13 @@
     <a href="summary.html">Summary</a>
     <a href="quiz.html">Quiz Generator</a>
     <a href="tutor.html" class="active">AI Tutor</a>
-    <a href="index.html">Logout</a>
+    <a href="#" onclick="logoutUser()">Logout</a>
 
-    <button class="theme-toggle" onclick="toggleTheme()">
+    <button
+        type="button"
+        class="theme-toggle"
+        onclick="toggleTheme()"
+    >
         Toggle Theme
     </button>
 
@@ -39,15 +43,25 @@
 
         <input
             type="text"
-            placeholder="Example: What is Machine Learning?">
+            id="tutorQuestion"
+            placeholder="Example: What is process management?"
+        >
 
-        <button>
+        <button
+            type="button"
+            onclick="askTutor()"
+        >
             Ask Question
         </button>
 
-        <p class="answer">
-            AI responses will appear here once connected to the backend.
-        </p>
+        <p id="tutorMessage"></p>
+
+        <div
+            id="tutorAnswer"
+            class="answer"
+        >
+            Ask Marco a question about your saved study material.
+        </div>
 
     </div>
 
