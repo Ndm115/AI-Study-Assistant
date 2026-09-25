@@ -18,7 +18,7 @@
     <a href="summary.html" class="active">Summary</a>
     <a href="quiz.html">Quiz Generator</a>
     <a href="tutor.html">AI Tutor</a>
-    <a href="index.html" onclick="logoutUser()">Logout</a>
+    <a href="#" onclick="logoutUser()">Logout</a>
 
     <button class="theme-toggle" onclick="toggleTheme()">
         Toggle Theme
@@ -46,7 +46,11 @@
     </div>
 
     <button type="button" onclick="generateSummary(event)">
-    Generate Summary
+        Generate Summary
+    </button>
+
+    <button type="button" onclick="clearSummary()">
+        Clear Summary
     </button>
 
     <div class="section-header">

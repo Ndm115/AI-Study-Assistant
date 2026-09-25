@@ -61,6 +61,7 @@ async function registerUser() {
         document.getElementById("message");
 
     if (!fullName || !email || !password) {
+
         message.textContent = "Please complete all fields.";
         return;
     }
@@ -130,8 +131,10 @@ async function loginUser() {
         document.getElementById("message");
 
     if (!email || !password) {
+
         message.textContent =
             "Please enter your email and password.";
+
         return;
     }
 
@@ -156,6 +159,7 @@ async function loginUser() {
         const data = await response.json();
 
         if (!response.ok) {
+
             message.textContent = data.message;
             return;
         }
@@ -181,7 +185,8 @@ async function loginUser() {
 
 async function saveNote() {
 
-    const userId = localStorage.getItem("userId");
+    const userId =
+        localStorage.getItem("userId");
 
     const moduleName =
         document.getElementById("moduleName").value.trim();
@@ -193,13 +198,16 @@ async function saveNote() {
         document.getElementById("uploadMessage");
 
     if (!userId) {
+
         window.location.href = "index.html";
         return;
     }
 
     if (!moduleName || !noteContent) {
+
         message.textContent =
             "Please enter a module name and study notes.";
+
         return;
     }
 
@@ -228,9 +236,19 @@ async function saveNote() {
 
         if (response.ok) {
 
-           
-            localStorage.setItem("currentNoteId", data.noteId);
-            localStorage.setItem("currentModuleName", moduleName);
+            localStorage.setItem(
+                "currentNoteId",
+                data.noteId
+            );
+
+            localStorage.setItem(
+                "currentModuleName",
+                moduleName
+            );
+
+            // Clear the upload draft after it has been saved.
+            localStorage.removeItem("marco_upload_module");
+            localStorage.removeItem("marco_upload_notes");
 
             message.textContent =
                 "Study material saved successfully!";
@@ -252,18 +270,24 @@ async function saveNote() {
 
 async function handleFileUpload() {
 
-    const fileInput = document.getElementById("noteFile");
+    const fileInput =
+        document.getElementById("noteFile");
+
     const file = fileInput.files[0];
-    const message = document.getElementById("uploadMessage");
+
+    const message =
+        document.getElementById("uploadMessage");
 
     if (!file) {
         return;
     }
 
-    const fileName = file.name.toLowerCase();
+    const fileName =
+        file.name.toLowerCase();
 
 
     // TXT FILE
+
     if (fileName.endsWith(".txt")) {
 
         const reader = new FileReader();
@@ -273,11 +297,14 @@ async function handleFileUpload() {
             document.getElementById("noteContent").value =
                 event.target.result;
 
+            saveUploadDraft();
+
             message.textContent =
                 "TXT file loaded successfully.";
         };
 
         reader.onerror = function () {
+
             message.textContent =
                 "Unable to read TXT file.";
         };
@@ -289,13 +316,19 @@ async function handleFileUpload() {
 
 
     // PDF FILE
+
     if (fileName.endsWith(".pdf")) {
 
-        message.textContent = "Reading PDF...";
+        message.textContent =
+            "Reading PDF...";
 
-        const formData = new FormData();
+        const formData =
+            new FormData();
 
-        formData.append("pdf", file);
+        formData.append(
+            "pdf",
+            file
+        );
 
         try {
 
@@ -307,15 +340,21 @@ async function handleFileUpload() {
                 }
             );
 
-            const data = await response.json();
+            const data =
+                await response.json();
 
             if (!response.ok) {
-                message.textContent = data.message;
+
+                message.textContent =
+                    data.message;
+
                 return;
             }
 
             document.getElementById("noteContent").value =
                 data.text;
+
+            saveUploadDraft();
 
             message.textContent =
                 "PDF loaded successfully.";
@@ -343,6 +382,7 @@ async function handleFileUpload() {
 function formatMarkdown(text) {
 
     return text
+
         // Escape HTML first
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
@@ -372,6 +412,500 @@ function formatMarkdown(text) {
 }
 
 
+// ============================================================
+// PAGE CONTENT PERSISTENCE
+// ============================================================
+
+function getStudyStorageKey(type) {
+
+    const noteId =
+        localStorage.getItem("currentNoteId");
+
+    if (!noteId) {
+        return null;
+    }
+
+    return "marco_" + type + "_" + noteId;
+}
+
+
+// --------------------
+// SUMMARY STORAGE
+// --------------------
+
+function saveSummaryState(moduleName, summary) {
+
+    const key =
+        getStudyStorageKey("summary");
+
+    if (!key) {
+        return;
+    }
+
+    localStorage.setItem(
+        key,
+        JSON.stringify({
+            moduleName: moduleName,
+            summary: summary
+        })
+    );
+}
+
+
+function loadSummaryState() {
+
+    const summaryText =
+        document.getElementById("summaryText");
+
+    // We are not on summary.html
+    if (!summaryText) {
+        return;
+    }
+
+    const key =
+        getStudyStorageKey("summary");
+
+    if (!key) {
+        return;
+    }
+
+    const saved =
+        localStorage.getItem(key);
+
+    if (!saved) {
+        return;
+    }
+
+    try {
+
+        const data =
+            JSON.parse(saved);
+
+        const summaryTitle =
+            document.getElementById("summaryTitle");
+
+        const summaryMessage =
+            document.getElementById("summaryMessage");
+
+        summaryTitle.textContent =
+            data.moduleName + " Summary";
+
+        summaryText.innerHTML =
+            formatMarkdown(data.summary);
+
+        summaryMessage.textContent =
+            "Saved summary restored.";
+
+    } catch (error) {
+
+        console.error(
+            "Unable to restore summary:",
+            error
+        );
+    }
+}
+
+
+function clearSummary() {
+
+    const key =
+        getStudyStorageKey("summary");
+
+    if (key) {
+        localStorage.removeItem(key);
+    }
+
+    const summaryTitle =
+        document.getElementById("summaryTitle");
+
+    const summaryText =
+        document.getElementById("summaryText");
+
+    const summaryMessage =
+        document.getElementById("summaryMessage");
+
+    if (summaryTitle) {
+        summaryTitle.textContent = "Summary";
+    }
+
+    if (summaryText) {
+
+        summaryText.textContent =
+            "Click the button below to generate a summary from your study material.";
+    }
+
+    if (summaryMessage) {
+
+        summaryMessage.textContent =
+            "Summary cleared.";
+    }
+}
+
+
+// --------------------
+// QUIZ STORAGE
+// --------------------
+
+function saveQuizState(moduleName) {
+
+    const key =
+        getStudyStorageKey("quiz");
+
+    if (!key) {
+        return;
+    }
+
+    localStorage.setItem(
+        key,
+        JSON.stringify({
+            moduleName: moduleName,
+            questions: currentQuiz
+        })
+    );
+}
+
+
+function loadQuizState() {
+
+    const quizContainer =
+        document.getElementById("quizContainer");
+
+    // We are not on quiz.html
+    if (!quizContainer) {
+        return;
+    }
+
+    const key =
+        getStudyStorageKey("quiz");
+
+    if (!key) {
+        return;
+    }
+
+    const saved =
+        localStorage.getItem(key);
+
+    if (!saved) {
+        return;
+    }
+
+    try {
+
+        const data =
+            JSON.parse(saved);
+
+        if (
+            !data.questions ||
+            !Array.isArray(data.questions)
+        ) {
+            return;
+        }
+
+        currentQuiz =
+            data.questions;
+
+        document.getElementById(
+            "quizTitle"
+        ).textContent =
+            data.moduleName + " Quiz";
+
+        document.getElementById(
+            "quizMessage"
+        ).textContent =
+            "Choose one answer for each question.";
+
+        displayQuiz();
+
+        document.getElementById(
+            "submitQuizButton"
+        ).style.display =
+            "inline-block";
+
+    } catch (error) {
+
+        console.error(
+            "Unable to restore quiz:",
+            error
+        );
+    }
+}
+
+
+function clearQuiz() {
+
+    const key =
+        getStudyStorageKey("quiz");
+
+    if (key) {
+        localStorage.removeItem(key);
+    }
+
+    currentQuiz = [];
+
+    const quizTitle =
+        document.getElementById("quizTitle");
+
+    const quizMessage =
+        document.getElementById("quizMessage");
+
+    const quizContainer =
+        document.getElementById("quizContainer");
+
+    const quizResult =
+        document.getElementById("quizResult");
+
+    const submitButton =
+        document.getElementById(
+            "submitQuizButton"
+        );
+
+    if (quizTitle) {
+        quizTitle.textContent =
+            "Quiz Questions";
+    }
+
+    if (quizMessage) {
+
+        quizMessage.textContent =
+            "Generate a quiz from your saved study material.";
+    }
+
+    if (quizContainer) {
+        quizContainer.innerHTML = "";
+    }
+
+    if (quizResult) {
+        quizResult.innerHTML = "";
+    }
+
+    if (submitButton) {
+        submitButton.style.display = "none";
+    }
+}
+
+
+// --------------------
+// TUTOR STORAGE
+// --------------------
+
+function saveTutorState(question, answer) {
+
+    const key =
+        getStudyStorageKey("tutor");
+
+    if (!key) {
+        return;
+    }
+
+    localStorage.setItem(
+        key,
+        JSON.stringify({
+            question: question,
+            answer: answer
+        })
+    );
+}
+
+
+function loadTutorState() {
+
+    const tutorAnswer =
+        document.getElementById("tutorAnswer");
+
+    // We are not on tutor.html
+    if (!tutorAnswer) {
+        return;
+    }
+
+    const key =
+        getStudyStorageKey("tutor");
+
+    if (!key) {
+        return;
+    }
+
+    const saved =
+        localStorage.getItem(key);
+
+    if (!saved) {
+        return;
+    }
+
+    try {
+
+        const data =
+            JSON.parse(saved);
+
+        document.getElementById(
+            "tutorQuestion"
+        ).value =
+            data.question;
+
+        tutorAnswer.innerHTML =
+            formatMarkdown(data.answer);
+
+        document.getElementById(
+            "tutorMessage"
+        ).textContent =
+            "Saved answer restored.";
+
+    } catch (error) {
+
+        console.error(
+            "Unable to restore tutor answer:",
+            error
+        );
+    }
+}
+
+
+function clearTutor() {
+
+    const key =
+        getStudyStorageKey("tutor");
+
+    if (key) {
+        localStorage.removeItem(key);
+    }
+
+    const tutorQuestion =
+        document.getElementById(
+            "tutorQuestion"
+        );
+
+    const tutorAnswer =
+        document.getElementById(
+            "tutorAnswer"
+        );
+
+    const tutorMessage =
+        document.getElementById(
+            "tutorMessage"
+        );
+
+    if (tutorQuestion) {
+        tutorQuestion.value = "";
+    }
+
+    if (tutorAnswer) {
+
+        tutorAnswer.textContent =
+            "Ask Marco a question about your saved study material.";
+    }
+
+    if (tutorMessage) {
+
+        tutorMessage.textContent =
+            "Tutor cleared.";
+    }
+}
+
+
+// --------------------
+// UPLOAD FORM STORAGE
+// --------------------
+
+function saveUploadDraft() {
+
+    const moduleName =
+        document.getElementById("moduleName");
+
+    const noteContent =
+        document.getElementById("noteContent");
+
+    // We are not on upload.html
+    if (!moduleName || !noteContent) {
+        return;
+    }
+
+    localStorage.setItem(
+        "marco_upload_module",
+        moduleName.value
+    );
+
+    localStorage.setItem(
+        "marco_upload_notes",
+        noteContent.value
+    );
+}
+
+
+function loadUploadDraft() {
+
+    const moduleName =
+        document.getElementById("moduleName");
+
+    const noteContent =
+        document.getElementById("noteContent");
+
+    // We are not on upload.html
+    if (!moduleName || !noteContent) {
+        return;
+    }
+
+    moduleName.value =
+        localStorage.getItem(
+            "marco_upload_module"
+        ) || "";
+
+    noteContent.value =
+        localStorage.getItem(
+            "marco_upload_notes"
+        ) || "";
+
+    moduleName.addEventListener(
+        "input",
+        saveUploadDraft
+    );
+
+    noteContent.addEventListener(
+        "input",
+        saveUploadDraft
+    );
+}
+
+
+function clearUploadForm() {
+
+    localStorage.removeItem(
+        "marco_upload_module"
+    );
+
+    localStorage.removeItem(
+        "marco_upload_notes"
+    );
+
+    const moduleName =
+        document.getElementById("moduleName");
+
+    const noteContent =
+        document.getElementById("noteContent");
+
+    const noteFile =
+        document.getElementById("noteFile");
+
+    const uploadMessage =
+        document.getElementById("uploadMessage");
+
+    if (moduleName) {
+        moduleName.value = "";
+    }
+
+    if (noteContent) {
+        noteContent.value = "";
+    }
+
+    if (noteFile) {
+        noteFile.value = "";
+    }
+
+    if (uploadMessage) {
+        uploadMessage.textContent =
+            "Form cleared.";
+    }
+}
+
+
 // --------------------
 // GENERATE AI SUMMARY
 // --------------------
@@ -382,7 +916,8 @@ async function generateSummary(event) {
         event.preventDefault();
     }
 
-    const noteId = localStorage.getItem("currentNoteId");
+    const noteId =
+        localStorage.getItem("currentNoteId");
 
     const summaryText =
         document.getElementById("summaryText");
@@ -423,7 +958,8 @@ async function generateSummary(event) {
             }
         );
 
-        const data = await response.json();
+        const data =
+            await response.json();
 
         if (!response.ok) {
 
@@ -444,6 +980,13 @@ async function generateSummary(event) {
 
         summaryMessage.textContent =
             "Summary generated successfully.";
+
+        // Save the visible result so it remains
+        // when the user changes pages.
+        saveSummaryState(
+            data.moduleName,
+            data.summary
+        );
 
         localStorage.setItem(
             "currentResultId",
@@ -484,11 +1027,12 @@ async function generateQuiz() {
         document.getElementById("quizResult");
 
     const submitButton =
-        document.getElementById("submitQuizButton");
+        document.getElementById(
+            "submitQuizButton"
+        );
 
     const quizTitle =
         document.getElementById("quizTitle");
-
 
     if (!noteId) {
 
@@ -498,14 +1042,14 @@ async function generateQuiz() {
         return;
     }
 
-
     quizMessage.textContent =
         "Generating your quiz...";
 
     quizContainer.innerHTML = "";
     quizResult.innerHTML = "";
-    submitButton.style.display = "none";
 
+    submitButton.style.display =
+        "none";
 
     try {
 
@@ -524,8 +1068,8 @@ async function generateQuiz() {
             }
         );
 
-        const data = await response.json();
-
+        const data =
+            await response.json();
 
         if (!response.ok) {
 
@@ -535,8 +1079,8 @@ async function generateQuiz() {
             return;
         }
 
-
-        currentQuiz = data.questions;
+        currentQuiz =
+            data.questions;
 
         quizTitle.textContent =
             data.moduleName + " Quiz";
@@ -546,9 +1090,13 @@ async function generateQuiz() {
 
         displayQuiz();
 
+        // Save generated quiz for this note.
+        saveQuizState(
+            data.moduleName
+        );
+
         submitButton.style.display =
             "inline-block";
-
 
     } catch (error) {
 
@@ -567,76 +1115,90 @@ async function generateQuiz() {
 function displayQuiz() {
 
     const quizContainer =
-        document.getElementById("quizContainer");
+        document.getElementById(
+            "quizContainer"
+        );
 
     quizContainer.innerHTML = "";
 
+    currentQuiz.forEach(
+        (question, questionIndex) => {
 
-    currentQuiz.forEach((question, questionIndex) => {
+            const questionBox =
+                document.createElement("div");
 
-        const questionBox =
-            document.createElement("div");
-
-        questionBox.className =
-            "quiz-question";
-
-
-        const questionHeading =
-            document.createElement("h3");
-
-        questionHeading.textContent =
-            (questionIndex + 1) + ". " + question.question;
-
-        questionBox.appendChild(
-            questionHeading
-        );
+            questionBox.className =
+                "quiz-question";
 
 
-        question.options.forEach(
-            (option, optionIndex) => {
+            const questionHeading =
+                document.createElement("h3");
 
-                const label =
-                    document.createElement("label");
+            questionHeading.textContent =
+                (questionIndex + 1) +
+                ". " +
+                question.question;
 
-                label.className =
-                    "quiz-option";
-
-
-                const radio =
-                    document.createElement("input");
-
-                radio.type = "radio";
-
-                radio.name =
-                    "question-" + questionIndex;
-
-                radio.value =
-                    optionIndex;
+            questionBox.appendChild(
+                questionHeading
+            );
 
 
-                label.appendChild(radio);
+            question.options.forEach(
+                (option, optionIndex) => {
 
-                label.appendChild(
-                    document.createTextNode(
-                        " " + option
-                    )
-                );
+                    const label =
+                        document.createElement(
+                            "label"
+                        );
 
-                questionBox.appendChild(
-                    label
-                );
-
-                questionBox.appendChild(
-                    document.createElement("br")
-                );
-            }
-        );
+                    label.className =
+                        "quiz-option";
 
 
-        quizContainer.appendChild(
-            questionBox
-        );
-    });
+                    const radio =
+                        document.createElement(
+                            "input"
+                        );
+
+                    radio.type =
+                        "radio";
+
+                    radio.name =
+                        "question-" +
+                        questionIndex;
+
+                    radio.value =
+                        optionIndex;
+
+
+                    label.appendChild(
+                        radio
+                    );
+
+                    label.appendChild(
+                        document.createTextNode(
+                            " " + option
+                        )
+                    );
+
+                    questionBox.appendChild(
+                        label
+                    );
+
+                    questionBox.appendChild(
+                        document.createElement(
+                            "br"
+                        )
+                    );
+                }
+            );
+
+            quizContainer.appendChild(
+                questionBox
+            );
+        }
+    );
 }
 
 
@@ -655,6 +1217,7 @@ function submitQuiz() {
 
 
     // First check that every question has an answer
+
     currentQuiz.forEach(
         (question, questionIndex) => {
 
@@ -671,8 +1234,9 @@ function submitQuiz() {
 
 
     const quizResult =
-        document.getElementById("quizResult");
-
+        document.getElementById(
+            "quizResult"
+        );
 
     if (unanswered > 0) {
 
@@ -684,6 +1248,7 @@ function submitQuiz() {
 
 
     // Mark each question
+
     currentQuiz.forEach(
         (question, questionIndex) => {
 
@@ -696,14 +1261,17 @@ function submitQuiz() {
                 Number(selected.value);
 
             const questionBox =
-                document.querySelectorAll(".quiz-question")[
-                    questionIndex
-                ];
+                document.querySelectorAll(
+                    ".quiz-question"
+                )[questionIndex];
 
 
             // Remove old feedback if quiz is submitted again
+
             const oldFeedback =
-                questionBox.querySelector(".question-feedback");
+                questionBox.querySelector(
+                    ".question-feedback"
+                );
 
             if (oldFeedback) {
                 oldFeedback.remove();
@@ -745,28 +1313,31 @@ function submitQuiz() {
                 );
             }
 
-
             questionBox.appendChild(
                 feedback
             );
 
 
             // Stop answers being changed after submission
+
             const radioButtons =
                 questionBox.querySelectorAll(
                     'input[type="radio"]'
                 );
 
-            radioButtons.forEach(radio => {
-                radio.disabled = true;
-            });
+            radioButtons.forEach(
+                radio => {
+                    radio.disabled = true;
+                }
+            );
         }
     );
 
 
     const percentage =
         Math.round(
-            (score / currentQuiz.length) * 100
+            (score / currentQuiz.length) *
+            100
         );
 
 
@@ -782,10 +1353,13 @@ function submitQuiz() {
 
 
     // Stop the quiz being submitted twice
+
     document.getElementById(
         "submitQuizButton"
-    ).style.display = "none";
+    ).style.display =
+        "none";
 }
+
 
 // --------------------
 // AI TUTOR
@@ -794,16 +1368,24 @@ function submitQuiz() {
 async function askTutor() {
 
     const noteId =
-        localStorage.getItem("currentNoteId");
+        localStorage.getItem(
+            "currentNoteId"
+        );
 
     const questionInput =
-        document.getElementById("tutorQuestion");
+        document.getElementById(
+            "tutorQuestion"
+        );
 
     const tutorMessage =
-        document.getElementById("tutorMessage");
+        document.getElementById(
+            "tutorMessage"
+        );
 
     const tutorAnswer =
-        document.getElementById("tutorAnswer");
+        document.getElementById(
+            "tutorAnswer"
+        );
 
     const question =
         questionInput.value.trim();
@@ -852,7 +1434,8 @@ async function askTutor() {
         );
 
 
-        const data = await response.json();
+        const data =
+            await response.json();
 
 
         if (!response.ok) {
@@ -865,10 +1448,20 @@ async function askTutor() {
 
 
         tutorAnswer.innerHTML =
-            formatMarkdown(data.answer);
+            formatMarkdown(
+                data.answer
+            );
 
         tutorMessage.textContent =
             "Answer generated successfully.";
+
+
+        // Keep the question and answer when
+        // moving between pages.
+        saveTutorState(
+            question,
+            data.answer
+        );
 
 
     } catch (error) {
@@ -897,22 +1490,26 @@ async function loadDashboard() {
 
 
     // Only run this code on the Dashboard
+
     if (!materialsContainer) {
         return;
     }
 
 
     if (!userId) {
+
         window.location.href = "index.html";
         return;
     }
 
 
     // Show student's name
+
     const welcomeMessage =
         document.getElementById("welcomeMessage");
 
     if (fullName) {
+
         welcomeMessage.textContent =
             "Welcome Back, " + fullName;
     }
@@ -924,7 +1521,8 @@ async function loadDashboard() {
             `http://localhost:3000/notes/${userId}`
         );
 
-        const data = await response.json();
+        const data =
+            await response.json();
 
 
         if (!response.ok) {
@@ -937,14 +1535,20 @@ async function loadDashboard() {
 
 
         // Dashboard counts
-        document.getElementById("notesCount").textContent =
+
+        document.getElementById(
+            "notesCount"
+        ).textContent =
             data.notesCount;
 
-        document.getElementById("summaryCount").textContent =
+        document.getElementById(
+            "summaryCount"
+        ).textContent =
             data.summaryCount;
 
 
         // Clear loading message
+
         materialsContainer.innerHTML = "";
 
 
@@ -958,6 +1562,7 @@ async function loadDashboard() {
 
 
         // Create a card for every saved study material
+
         data.notes.forEach(note => {
 
             const card =
@@ -977,45 +1582,82 @@ async function loadDashboard() {
                 document.createElement("p");
 
             const uploadDate =
-                new Date(note.UploadDate + "Z");
+                new Date(
+                    note.UploadDate + "Z"
+                );
 
             date.textContent =
                 "Uploaded: " +
                 uploadDate.toLocaleDateString();
 
 
+            // Study This button
+
             const button =
                 document.createElement("button");
 
             button.type = "button";
-            button.textContent = "Study This";
 
-            button.onclick = function () {
+            button.textContent =
+                "Study This";
 
-                selectStudyMaterial(
-                    note.NoteID,
-                    note.ModuleName
-                );
-            };
+            button.onclick =
+                function () {
 
+                    selectStudyMaterial(
+                        note.NoteID,
+                        note.ModuleName
+                    );
+                };
+
+
+            // Delete button
+
+            const deleteButton =
+                document.createElement("button");
+
+            deleteButton.type =
+                "button";
+
+            deleteButton.textContent =
+                "Delete";
+
+            deleteButton.onclick =
+                function () {
+
+                    deleteStudyMaterial(
+                        note.NoteID,
+                        note.ModuleName
+                    );
+                };
+
+
+            // Add everything to card
 
             card.appendChild(title);
             card.appendChild(date);
             card.appendChild(button);
+            card.appendChild(deleteButton);
 
-            materialsContainer.appendChild(card);
+            materialsContainer.appendChild(
+                card
+            );
         });
 
 
         // Show currently selected material
+
         const currentModule =
-            localStorage.getItem("currentModuleName");
+            localStorage.getItem(
+                "currentModuleName"
+            );
 
         if (currentModule) {
 
             document.getElementById(
                 "currentStudyMaterial"
-            ).textContent = currentModule;
+            ).textContent =
+                currentModule;
         }
 
 
@@ -1033,7 +1675,10 @@ async function loadDashboard() {
 // SELECT STUDY MATERIAL
 // --------------------
 
-function selectStudyMaterial(noteId, moduleName) {
+function selectStudyMaterial(
+    noteId,
+    moduleName
+) {
 
     localStorage.setItem(
         "currentNoteId",
@@ -1046,9 +1691,16 @@ function selectStudyMaterial(noteId, moduleName) {
     );
 
 
-    document.getElementById(
-        "currentStudyMaterial"
-    ).textContent = moduleName;
+    const currentStudyMaterial =
+        document.getElementById(
+            "currentStudyMaterial"
+        );
+
+    if (currentStudyMaterial) {
+
+        currentStudyMaterial.textContent =
+            moduleName;
+    }
 
 
     alert(
@@ -1056,6 +1708,130 @@ function selectStudyMaterial(noteId, moduleName) {
         " is now your selected study material."
     );
 }
+
+
+// --------------------
+// DELETE STUDY MATERIAL
+// --------------------
+
+async function deleteStudyMaterial(
+    noteId,
+    moduleName
+) {
+
+    // Ask before deleting
+
+    const confirmed =
+        confirm(
+            "Are you sure you want to delete " +
+            moduleName +
+            "?"
+        );
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    try {
+
+        const response = await fetch(
+            `http://localhost:3000/notes/${noteId}`,
+            {
+                method: "DELETE"
+            }
+        );
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            alert(data.message);
+            return;
+        }
+
+
+        // Remove locally stored AI content
+        // belonging to this study material.
+
+        localStorage.removeItem(
+            "marco_summary_" + noteId
+        );
+
+        localStorage.removeItem(
+            "marco_quiz_" + noteId
+        );
+
+        localStorage.removeItem(
+            "marco_tutor_" + noteId
+        );
+
+
+        // Check whether the deleted note
+        // is currently selected.
+
+        const currentNoteId =
+            localStorage.getItem(
+                "currentNoteId"
+            );
+
+
+        // If it was selected,
+        // clear the selection.
+
+        if (
+            String(currentNoteId) ===
+            String(noteId)
+        ) {
+
+            localStorage.removeItem(
+                "currentNoteId"
+            );
+
+            localStorage.removeItem(
+                "currentModuleName"
+            );
+
+            localStorage.removeItem(
+                "currentResultId"
+            );
+
+
+            const currentStudyMaterial =
+                document.getElementById(
+                    "currentStudyMaterial"
+                );
+
+            if (currentStudyMaterial) {
+
+                currentStudyMaterial.textContent =
+                    "None selected";
+            }
+        }
+
+
+        alert(
+            "Study material deleted successfully!"
+        );
+
+
+        // Reload dashboard
+
+        loadDashboard();
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(
+            "Could not connect to the server."
+        );
+    }
+}
+
 
 // --------------------
 // LOGOUT
@@ -1065,11 +1841,83 @@ function logoutUser() {
 
     localStorage.removeItem("userId");
     localStorage.removeItem("fullName");
-    localStorage.removeItem("currentNoteId");
-    localStorage.removeItem("currentResultId");
-    localStorage.removeItem("currentModuleName");
 
-    window.location.href = "index.html";
+    localStorage.removeItem(
+        "currentNoteId"
+    );
+
+    localStorage.removeItem(
+        "currentResultId"
+    );
+
+    localStorage.removeItem(
+        "currentModuleName"
+    );
+
+
+    // Remove unfinished upload draft.
+
+    localStorage.removeItem(
+        "marco_upload_module"
+    );
+
+    localStorage.removeItem(
+        "marco_upload_notes"
+    );
+
+
+    /*
+        Generated summaries, quizzes and
+        tutor answers are intentionally
+        stored per study material.
+
+        We remove all Marco temporary
+        content on logout so another user
+        using the browser cannot see the
+        previous user's generated content.
+    */
+
+    const keysToRemove = [];
+
+    for (
+        let i = 0;
+        i < localStorage.length;
+        i++
+    ) {
+
+        const key =
+            localStorage.key(i);
+
+        if (
+            key &&
+            (
+                key.startsWith(
+                    "marco_summary_"
+                ) ||
+
+                key.startsWith(
+                    "marco_quiz_"
+                ) ||
+
+                key.startsWith(
+                    "marco_tutor_"
+                )
+            )
+        ) {
+
+            keysToRemove.push(key);
+        }
+    }
+
+
+    keysToRemove.forEach(key => {
+
+        localStorage.removeItem(key);
+    });
+
+
+    window.location.href =
+        "index.html";
 }
 
 
@@ -1079,12 +1927,28 @@ function logoutUser() {
 
 function toggleTheme() {
 
-    document.body.classList.toggle("dark-mode");
+    document.body.classList.toggle(
+        "dark-mode"
+    );
 
-    if (document.body.classList.contains("dark-mode")) {
-        localStorage.setItem("theme", "dark");
+
+    if (
+        document.body.classList.contains(
+            "dark-mode"
+        )
+    ) {
+
+        localStorage.setItem(
+            "theme",
+            "dark"
+        );
+
     } else {
-        localStorage.setItem("theme", "light");
+
+        localStorage.setItem(
+            "theme",
+            "light"
+        );
     }
 }
 
@@ -1098,11 +1962,41 @@ window.onload = function () {
     const savedTheme =
         localStorage.getItem("theme");
 
+
     if (savedTheme === "dark") {
-        document.body.classList.add("dark-mode");
+
+        document.body.classList.add(
+            "dark-mode"
+        );
     }
 
 
-    // Load Dashboard information if this is dashboard.html
+    // Load Dashboard information
+    // if this is dashboard.html
+
     loadDashboard();
+
+
+    // Restore Summary if this
+    // is summary.html
+
+    loadSummaryState();
+
+
+    // Restore Quiz if this
+    // is quiz.html
+
+    loadQuizState();
+
+
+    // Restore Tutor answer if this
+    // is tutor.html
+
+    loadTutorState();
+
+
+    // Restore unfinished Upload form
+    // if this is upload.html
+
+    loadUploadDraft();
 };
