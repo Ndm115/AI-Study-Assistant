@@ -396,3 +396,8 @@ button:hover {
 .quiz-question h3 {
     margin-bottom: 15px;
 }
+
+/*Space between dashboard buttons */
+#studyMaterials button {
+    margin-right: 8px;
+}
