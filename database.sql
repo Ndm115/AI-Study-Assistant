@@ -1,16 +1,25 @@
-INSERT INTO Notes (UserID, ModuleName, NoteContent, UploadDate)
-VALUES (
-    1,
-    'Database Systems',
-    'SQL is used to store and retrieve data from databases.',
-    datetime('now')
+CREATE TABLE Users (
+    UserID INTEGER PRIMARY KEY AUTOINCREMENT,
+    FullName TEXT NOT NULL,
+    Email TEXT NOT NULL UNIQUE,
+    Password TEXT NOT NULL
 );
 
-INSERT INTO AIResults (NoteID, Summary, QuizQuestions, AIAnswer, CreatedAt)
-VALUES (
-    1,
-    'Database summary',
-    '1. What is SQL?',
-    'SQL is used to manage databases.',
-    datetime('now')
+CREATE TABLE Notes (
+    NoteID INTEGER PRIMARY KEY AUTOINCREMENT,
+    UserID INTEGER NOT NULL,
+    ModuleName TEXT NOT NULL,
+    NoteContent TEXT NOT NULL,
+    UploadDate TEXT NOT NULL,
+    FOREIGN KEY (UserID) REFERENCES Users(UserID)
+);
+
+CREATE TABLE AIResults (
+    ResultID INTEGER PRIMARY KEY AUTOINCREMENT,
+    NoteID INTEGER NOT NULL,
+    Summary TEXT,
+    QuizQuestions TEXT,
+    AIAnswer TEXT,
+    CreatedAt TEXT NOT NULL,
+    FOREIGN KEY (NoteID) REFERENCES Notes(NoteID)
 );
