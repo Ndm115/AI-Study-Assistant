@@ -4,10 +4,10 @@
     <title>Quiz Generator</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
 <div class="sidebar">
-
     <div class="logo-box">
         <div class="logo-circle">M</div>
         <h2>Marco AI Tutor</h2>
@@ -20,11 +20,9 @@
     <a href="tutor.html">AI Tutor</a>
     <a href="#" onclick="logoutUser()">Logout</a>
 
-    <button type="button" class="theme-toggle" onclick="toggleTheme()">
-        Toggle Theme
-    </button>
-
+    <button type="button" class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
 </div>
+
 
 <div class="main">
 
@@ -34,34 +32,18 @@
     </div>
 
     <div class="result-box">
-
         <h3 id="quizTitle">Quiz Questions</h3>
 
-        <p id="quizMessage">
-            Generate a quiz from your saved study material.
-        </p>
+        <p id="quizMessage">Generate a quiz from your saved study material.</p>
 
-        <button type="button" onclick="generateQuiz()">
-            Generate Quiz
-        </button>
-
-        <button type="button" onclick="clearQuiz()">
-            Clear Quiz
-        </button>
+        <button type="button" onclick="generateQuiz()">Generate Quiz</button>
+        <button type="button" onclick="clearQuiz()">Clear Quiz</button>
 
         <div id="quizContainer"></div>
 
-        <button
-            type="button"
-            id="submitQuizButton"
-            onclick="submitQuiz()"
-            style="display: none;"
-        >
-            Submit Quiz
-        </button>
+        <button type="button" id="submitQuizButton" onclick="submitQuiz()" style="display: none;">Submit Quiz</button>
 
         <div id="quizResult"></div>
-
     </div>
 
     <div class="section-header">
@@ -69,9 +51,7 @@
         <p>Ask Marco to explain concepts or answer questions from your notes.</p>
     </div>
 
-    <button type="button" onclick="location.href='tutor.html'">
-        Ask AI Tutor
-    </button>
+    <button type="button" onclick="location.href='tutor.html'">Ask AI Tutor</button>
 
 </div>
 

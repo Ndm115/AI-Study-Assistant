@@ -4,10 +4,10 @@
     <title>Summary</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
 <div class="sidebar">
-
     <div class="logo-box">
         <div class="logo-circle">M</div>
         <h2>Marco AI Tutor</h2>
@@ -20,11 +20,9 @@
     <a href="tutor.html">AI Tutor</a>
     <a href="#" onclick="logoutUser()">Logout</a>
 
-    <button class="theme-toggle" onclick="toggleTheme()">
-        Toggle Theme
-    </button>
-
+    <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
 </div>
+
 
 <div class="main">
 
@@ -34,7 +32,6 @@
     </div>
 
     <div class="result-box">
-
         <h3 id="summaryTitle">Summary</h3>
 
         <div id="summaryText">
@@ -42,25 +39,17 @@
         </div>
 
         <p id="summaryMessage"></p>
-
     </div>
 
-    <button type="button" onclick="generateSummary(event)">
-        Generate Summary
-    </button>
-
-    <button type="button" onclick="clearSummary()">
-        Clear Summary
-    </button>
+    <button type="button" onclick="generateSummary(event)">Generate Summary</button>
+    <button type="button" onclick="clearSummary()">Clear Summary</button>
 
     <div class="section-header">
         <h2>Next Step</h2>
         <p>Generate revision questions based on your study material.</p>
     </div>
 
-    <button onclick="location.href='quiz.html'">
-        Generate Quiz
-    </button>
+    <button onclick="location.href='quiz.html'">Generate Quiz</button>
 
 </div>
 

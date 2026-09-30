@@ -4,10 +4,10 @@
     <title>Upload Notes</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
 <div class="sidebar">
-
     <div class="logo-box">
         <div class="logo-circle">M</div>
         <h2>Marco AI Tutor</h2>
@@ -20,11 +20,9 @@
     <a href="tutor.html">AI Tutor</a>
     <a href="#" onclick="logoutUser()">Logout</a>
 
-    <button class="theme-toggle" onclick="toggleTheme()">
-        Toggle Theme
-    </button>
-
+    <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
 </div>
+
 
 <div class="main">
 
@@ -34,41 +32,19 @@
     </div>
 
     <div class="form-card">
-
         <label>Subject / Module Name</label>
-
-        <input
-            type="text"
-            id="moduleName"
-            placeholder="Example: Artificial Intelligence"
-        >
+        <input type="text" id="moduleName" placeholder="Example: Artificial Intelligence">
 
         <label>Paste Notes</label>
-
-        <textarea
-            id="noteContent"
-            placeholder="Paste your lecture notes here..."
-        ></textarea>
+        <textarea id="noteContent" placeholder="Paste your lecture notes here..."></textarea>
 
         <label>Upload File</label>
+        <input type="file" id="noteFile" accept=".txt,.pdf" onchange="handleFileUpload()">
 
-        <input
-            type="file"
-            id="noteFile"
-            accept=".txt,.pdf"
-            onchange="handleFileUpload()"
-        >
-
-        <button type="button" onclick="saveNote()">
-            Save Study Material
-        </button>
-
-        <button type="button" onclick="clearUploadForm()">
-            Clear Form
-        </button>
+        <button type="button" onclick="saveNote()">Save Study Material</button>
+        <button type="button" onclick="clearUploadForm()">Clear Form</button>
 
         <p id="uploadMessage"></p>
-
     </div>
 
 </div>

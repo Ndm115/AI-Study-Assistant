@@ -29,24 +29,18 @@ const ai = new GoogleGenAI({
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function generateWithGemini(prompt) {
-
     const models = [
-        "gemini-3.8-flash",
         "gemini-3.6-flash",
-        "gemini-3.5-flash-lite"
+        "gemini-3.5-flash-lite",
+        "gemini-3.8-flash"
     ];
 
     let lastError;
 
     for (const model of models) {
-
         for (let attempt = 1; attempt <= 3; attempt++) {
-
             try {
-
-                console.log(
-                    `Gemini request: ${model} - attempt ${attempt}`
-                );
+                console.log(`Gemini request: ${model} - attempt ${attempt}`);
 
                 const response = await ai.models.generateContent({
                     model: model,
@@ -56,13 +50,9 @@ async function generateWithGemini(prompt) {
                 return response;
 
             } catch (error) {
-
                 lastError = error;
 
-                const status =
-                    error.status ||
-                    error.statusCode ||
-                    error.code;
+                const status = error.status || error.statusCode || error.code;
 
                 console.error(
                     `Gemini ${model} attempt ${attempt} failed:`,
@@ -82,18 +72,13 @@ async function generateWithGemini(prompt) {
                 }
 
                 if (attempt < 3) {
-
-                    const delay =
-                        1000 * Math.pow(2, attempt - 1);
-
+                    const delay = 1000 * Math.pow(2, attempt - 1);
                     await sleep(delay);
                 }
             }
         }
 
-        console.log(
-            `${model} unavailable. Trying fallback model...`
-        );
+        console.log(`${model} unavailable. Trying fallback model...`);
     }
 
     throw lastError;
@@ -122,7 +107,6 @@ fs.copyFile(
     "study_assistant.db",
     "backups/study_assistant_backup.db",
     (err) => {
-
         if (err) {
             console.log("Database backup failed:", err);
         } else {
@@ -138,16 +122,10 @@ fs.copyFile(
 // --------------------
 
 const db = new sqlite3.Database("./study_assistant.db", (err) => {
-
     if (err) {
-        console.error(
-            "Database connection failed:",
-            err.message
-        );
+        console.error("Database connection failed:", err.message);
     } else {
-        console.log(
-            "Connected to Marco SQLite database."
-        );
+        console.log("Connected to Marco SQLite database.");
     }
 });
 
@@ -157,10 +135,7 @@ const db = new sqlite3.Database("./study_assistant.db", (err) => {
 // --------------------
 
 app.get("/", (req, res) => {
-
-    res.send(
-        "Marco AI Study Assistant backend is running!"
-    );
+    res.send("Marco AI Study Assistant backend is running!");
 });
 
 
@@ -169,24 +144,16 @@ app.get("/", (req, res) => {
 // --------------------
 
 app.post("/register", async (req, res) => {
-
-    const {
-        fullName,
-        email,
-        password
-    } = req.body;
+    const { fullName, email, password } = req.body;
 
     if (!fullName || !email || !password) {
-
         return res.status(400).json({
             message: "Please complete all fields."
         });
     }
 
     try {
-
-        const hashedPassword =
-            await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, 10);
 
         const sql = `
             INSERT INTO Users
@@ -194,46 +161,29 @@ app.post("/register", async (req, res) => {
             VALUES (?, ?, ?)
         `;
 
-        db.run(
-            sql,
-            [fullName, email, hashedPassword],
-            function (err) {
-
-                if (err) {
-
-                    if (err.message.includes("UNIQUE")) {
-
-                        return res.status(400).json({
-                            message:
-                                "An account with this email already exists."
-                        });
-                    }
-
-                    console.error(
-                        "Registration error:",
-                        err.message
-                    );
-
-                    return res.status(500).json({
-                        message:
-                            "Unable to create account."
+        db.run(sql, [fullName, email, hashedPassword], function (err) {
+            if (err) {
+                if (err.message.includes("UNIQUE")) {
+                    return res.status(400).json({
+                        message: "An account with this email already exists."
                     });
                 }
 
-                res.status(201).json({
-                    message:
-                        "Account created successfully!",
-                    userId: this.lastID
+                console.error("Registration error:", err.message);
+
+                return res.status(500).json({
+                    message: "Unable to create account."
                 });
             }
-        );
+
+            res.status(201).json({
+                message: "Account created successfully!",
+                userId: this.lastID
+            });
+        });
 
     } catch (error) {
-
-        console.error(
-            "Registration error:",
-            error
-        );
+        console.error("Registration error:", error);
 
         res.status(500).json({
             message: "Unable to create account."
@@ -247,17 +197,11 @@ app.post("/register", async (req, res) => {
 // --------------------
 
 app.post("/login", (req, res) => {
-
-    const {
-        email,
-        password
-    } = req.body;
+    const { email, password } = req.body;
 
     if (!email || !password) {
-
         return res.status(400).json({
-            message:
-                "Please enter your email and password."
+            message: "Please enter your email and password."
         });
     }
 
@@ -268,13 +212,8 @@ app.post("/login", (req, res) => {
     `;
 
     db.get(sql, [email], async (err, user) => {
-
         if (err) {
-
-            console.error(
-                "Login error:",
-                err.message
-            );
+            console.error("Login error:", err.message);
 
             return res.status(500).json({
                 message: "Unable to log in."
@@ -282,26 +221,17 @@ app.post("/login", (req, res) => {
         }
 
         if (!user) {
-
             return res.status(401).json({
-                message:
-                    "Incorrect email or password."
+                message: "Incorrect email or password."
             });
         }
 
         try {
-
-            const passwordMatches =
-                await bcrypt.compare(
-                    password,
-                    user.Password
-                );
+            const passwordMatches = await bcrypt.compare(password, user.Password);
 
             if (!passwordMatches) {
-
                 return res.status(401).json({
-                    message:
-                        "Incorrect email or password."
+                    message: "Incorrect email or password."
                 });
             }
 
@@ -312,11 +242,7 @@ app.post("/login", (req, res) => {
             });
 
         } catch (error) {
-
-            console.error(
-                "Password check error:",
-                error
-            );
+            console.error("Password check error:", error);
 
             res.status(500).json({
                 message: "Unable to log in."
@@ -331,18 +257,11 @@ app.post("/login", (req, res) => {
 // --------------------
 
 app.post("/notes", (req, res) => {
-
-    const {
-        userId,
-        moduleName,
-        noteContent
-    } = req.body;
+    const { userId, moduleName, noteContent } = req.body;
 
     if (!userId || !moduleName || !noteContent) {
-
         return res.status(400).json({
-            message:
-                "Please enter a module name and study notes."
+            message: "Please enter a module name and study notes."
         });
     }
 
@@ -352,31 +271,20 @@ app.post("/notes", (req, res) => {
         VALUES (?, ?, ?, datetime('now'))
     `;
 
-    db.run(
-        sql,
-        [userId, moduleName, noteContent],
-        function (err) {
+    db.run(sql, [userId, moduleName, noteContent], function (err) {
+        if (err) {
+            console.error("Save note error:", err.message);
 
-            if (err) {
-
-                console.error(
-                    "Save note error:",
-                    err.message
-                );
-
-                return res.status(500).json({
-                    message:
-                        "Unable to save study material."
-                });
-            }
-
-            res.status(201).json({
-                message:
-                    "Study material saved successfully!",
-                noteId: this.lastID
+            return res.status(500).json({
+                message: "Unable to save study material."
             });
         }
-    );
+
+        res.status(201).json({
+            message: "Study material saved successfully!",
+            noteId: this.lastID
+        });
+    });
 });
 
 
@@ -385,7 +293,6 @@ app.post("/notes", (req, res) => {
 // --------------------
 
 app.get("/notes/:userId", (req, res) => {
-
     const userId = req.params.userId;
 
     const notesSql = `
@@ -398,61 +305,40 @@ app.get("/notes/:userId", (req, res) => {
         ORDER BY UploadDate DESC
     `;
 
-    db.all(
-        notesSql,
-        [userId],
-        (err, notes) => {
+    db.all(notesSql, [userId], (err, notes) => {
+        if (err) {
+            console.error("Retrieve study materials error:", err.message);
 
-            if (err) {
+            return res.status(500).json({
+                message: "Unable to retrieve study materials."
+            });
+        }
 
-                console.error(
-                    "Retrieve study materials error:",
-                    err.message
-                );
+        const summarySql = `
+            SELECT COUNT(*) AS SummaryCount
+            FROM AIResults ar
+            INNER JOIN Notes n
+                ON ar.NoteID = n.NoteID
+            WHERE n.UserID = ?
+            AND ar.Summary IS NOT NULL
+        `;
+
+        db.get(summarySql, [userId], (summaryErr, result) => {
+            if (summaryErr) {
+                console.error("Retrieve summary count error:", summaryErr.message);
 
                 return res.status(500).json({
-                    message:
-                        "Unable to retrieve study materials."
+                    message: "Unable to retrieve dashboard information."
                 });
             }
 
-            const summarySql = `
-                SELECT COUNT(*) AS SummaryCount
-                FROM AIResults ar
-                INNER JOIN Notes n
-                    ON ar.NoteID = n.NoteID
-                WHERE n.UserID = ?
-                AND ar.Summary IS NOT NULL
-            `;
-
-            db.get(
-                summarySql,
-                [userId],
-                (summaryErr, result) => {
-
-                    if (summaryErr) {
-
-                        console.error(
-                            "Retrieve summary count error:",
-                            summaryErr.message
-                        );
-
-                        return res.status(500).json({
-                            message:
-                                "Unable to retrieve dashboard information."
-                        });
-                    }
-
-                    res.json({
-                        notes: notes,
-                        notesCount: notes.length,
-                        summaryCount:
-                            result.SummaryCount
-                    });
-                }
-            );
-        }
-    );
+            res.json({
+                notes: notes,
+                notesCount: notes.length,
+                summaryCount: result.SummaryCount
+            });
+        });
+    });
 });
 
 
@@ -461,55 +347,33 @@ app.get("/notes/:userId", (req, res) => {
 // --------------------
 
 app.delete("/notes/:noteId", (req, res) => {
-
     const noteId = req.params.noteId;
 
     // First delete AI results connected to this note
-    db.run(
-        "DELETE FROM AIResults WHERE NoteID = ?",
-        [noteId],
-        function (err) {
+    db.run("DELETE FROM AIResults WHERE NoteID = ?", [noteId], function (err) {
+        if (err) {
+            console.error("Delete AI results error:", err.message);
 
+            return res.status(500).json({
+                message: "Unable to delete study material."
+            });
+        }
+
+        // Then delete the study note itself
+        db.run("DELETE FROM Notes WHERE NoteID = ?", [noteId], function (err) {
             if (err) {
-
-                console.error(
-                    "Delete AI results error:",
-                    err.message
-                );
+                console.error("Delete note error:", err.message);
 
                 return res.status(500).json({
-                    message:
-                        "Unable to delete study material."
+                    message: "Unable to delete study material."
                 });
             }
 
-            // Then delete the study note itself
-            db.run(
-                "DELETE FROM Notes WHERE NoteID = ?",
-                [noteId],
-                function (err) {
-
-                    if (err) {
-
-                        console.error(
-                            "Delete note error:",
-                            err.message
-                        );
-
-                        return res.status(500).json({
-                            message:
-                                "Unable to delete study material."
-                        });
-                    }
-
-                    res.json({
-                        message:
-                            "Study material deleted successfully!"
-                    });
-                }
-            );
-        }
-    );
+            res.json({
+                message: "Study material deleted successfully!"
+            });
+        });
+    });
 });
 
 
@@ -518,14 +382,11 @@ app.delete("/notes/:noteId", (req, res) => {
 // --------------------
 
 app.post("/generate-summary", (req, res) => {
-
     const { noteId } = req.body;
 
     if (!noteId) {
-
         return res.status(400).json({
-            message:
-                "No study material was selected."
+            message: "No study material was selected."
         });
     }
 
@@ -536,30 +397,21 @@ app.post("/generate-summary", (req, res) => {
     `;
 
     db.get(sql, [noteId], async (err, note) => {
-
         if (err) {
-
-            console.error(
-                "Retrieve note error:",
-                err.message
-            );
+            console.error("Retrieve note error:", err.message);
 
             return res.status(500).json({
-                message:
-                    "Unable to retrieve study material."
+                message: "Unable to retrieve study material."
             });
         }
 
         if (!note) {
-
             return res.status(404).json({
-                message:
-                    "Study material was not found."
+                message: "Study material was not found."
             });
         }
 
         try {
-
             const prompt = `
 You are an AI study assistant for university students.
 
@@ -576,16 +428,12 @@ Study Notes:
 ${note.NoteContent}
             `;
 
-            const response =
-                await generateWithGemini(prompt);
-
+            const response = await generateWithGemini(prompt);
             const summary = response.text;
 
             if (!summary) {
-
                 return res.status(500).json({
-                    message:
-                        "Gemini did not generate a summary."
+                    message: "Gemini did not generate a summary."
                 });
             }
 
@@ -600,45 +448,28 @@ ${note.NoteContent}
                 VALUES (?, ?, datetime('now'))
             `;
 
-            db.run(
-                saveSql,
-                [noteId, summary],
-                function (saveErr) {
+            db.run(saveSql, [noteId, summary], function (saveErr) {
+                if (saveErr) {
+                    console.error("Save summary error:", saveErr.message);
 
-                    if (saveErr) {
-
-                        console.error(
-                            "Save summary error:",
-                            saveErr.message
-                        );
-
-                        return res.status(500).json({
-                            message:
-                                "Summary generated but could not be saved."
-                        });
-                    }
-
-                    res.json({
-                        message:
-                            "Summary generated successfully!",
-                        resultId: this.lastID,
-                        moduleName:
-                            note.ModuleName,
-                        summary: summary
+                    return res.status(500).json({
+                        message: "Summary generated but could not be saved."
                     });
                 }
-            );
+
+                res.json({
+                    message: "Summary generated successfully!",
+                    resultId: this.lastID,
+                    moduleName: note.ModuleName,
+                    summary: summary
+                });
+            });
 
         } catch (error) {
-
-            console.error(
-                "Gemini error:",
-                error
-            );
+            console.error("Gemini error:", error);
 
             res.status(500).json({
-                message:
-                    "Unable to generate AI summary."
+                message: "Unable to generate AI summary."
             });
         }
     });
@@ -650,14 +481,11 @@ ${note.NoteContent}
 // --------------------
 
 app.post("/generate-quiz", (req, res) => {
-
     const { noteId } = req.body;
 
     if (!noteId) {
-
         return res.status(400).json({
-            message:
-                "No study material was selected."
+            message: "No study material was selected."
         });
     }
 
@@ -668,30 +496,21 @@ app.post("/generate-quiz", (req, res) => {
     `;
 
     db.get(sql, [noteId], async (err, note) => {
-
         if (err) {
-
-            console.error(
-                "Retrieve note error:",
-                err.message
-            );
+            console.error("Retrieve note error:", err.message);
 
             return res.status(500).json({
-                message:
-                    "Unable to retrieve study material."
+                message: "Unable to retrieve study material."
             });
         }
 
         if (!note) {
-
             return res.status(404).json({
-                message:
-                    "Study material was not found."
+                message: "Study material was not found."
             });
         }
 
         try {
-
             const prompt = `
 You are an AI study assistant for university students.
 
@@ -740,16 +559,12 @@ Study Notes:
 ${note.NoteContent}
             `;
 
-            const response =
-                await generateWithGemini(prompt);
-
+            const response = await generateWithGemini(prompt);
             let quizText = response.text;
 
             if (!quizText) {
-
                 return res.status(500).json({
-                    message:
-                        "Gemini did not generate a quiz."
+                    message: "Gemini did not generate a quiz."
                 });
             }
 
@@ -767,24 +582,14 @@ ${note.NoteContent}
             let quiz;
 
             try {
-
                 quiz = JSON.parse(quizText);
 
             } catch (parseError) {
-
-                console.error(
-                    "Quiz JSON parse error:",
-                    parseError.message
-                );
-
-                console.error(
-                    "Gemini quiz response:",
-                    quizText
-                );
+                console.error("Quiz JSON parse error:", parseError.message);
+                console.error("Gemini quiz response:", quizText);
 
                 return res.status(500).json({
-                    message:
-                        "The AI generated an invalid quiz. Please try again."
+                    message: "The AI generated an invalid quiz. Please try again."
                 });
             }
 
@@ -793,36 +598,23 @@ ${note.NoteContent}
             // VALIDATE QUIZ
             // --------------------
 
-            if (
-                !quiz.questions ||
-                !Array.isArray(quiz.questions) ||
-                quiz.questions.length !== 10
-            ) {
-
+            if (!quiz.questions || !Array.isArray(quiz.questions) || quiz.questions.length !== 10) {
                 return res.status(500).json({
-                    message:
-                        "The AI did not generate 10 valid questions. Please try again."
+                    message: "The AI did not generate 10 valid questions. Please try again."
                 });
             }
 
             for (const question of quiz.questions) {
-
                 if (
                     !question.question ||
-                    !Array.isArray(
-                        question.options
-                    ) ||
+                    !Array.isArray(question.options) ||
                     question.options.length !== 4 ||
-                    !Number.isInteger(
-                        question.correctAnswer
-                    ) ||
+                    !Number.isInteger(question.correctAnswer) ||
                     question.correctAnswer < 0 ||
                     question.correctAnswer > 3
                 ) {
-
                     return res.status(500).json({
-                        message:
-                            "The AI generated an invalid quiz format. Please try again."
+                        message: "The AI generated an invalid quiz format. Please try again."
                     });
                 }
             }
@@ -838,51 +630,28 @@ ${note.NoteContent}
                 VALUES (?, ?, datetime('now'))
             `;
 
-            db.run(
-                saveQuizSql,
-                [
-                    noteId,
-                    JSON.stringify(
-                        quiz.questions
-                    )
-                ],
-                function (saveErr) {
+            db.run(saveQuizSql, [noteId, JSON.stringify(quiz.questions)], function (saveErr) {
+                if (saveErr) {
+                    console.error("Save quiz error:", saveErr.message);
 
-                    if (saveErr) {
-
-                        console.error(
-                            "Save quiz error:",
-                            saveErr.message
-                        );
-
-                        return res.status(500).json({
-                            message:
-                                "Quiz generated but could not be saved."
-                        });
-                    }
-
-                    res.json({
-                        message:
-                            "Quiz generated successfully!",
-                        resultId: this.lastID,
-                        moduleName:
-                            note.ModuleName,
-                        questions:
-                            quiz.questions
+                    return res.status(500).json({
+                        message: "Quiz generated but could not be saved."
                     });
                 }
-            );
+
+                res.json({
+                    message: "Quiz generated successfully!",
+                    resultId: this.lastID,
+                    moduleName: note.ModuleName,
+                    questions: quiz.questions
+                });
+            });
 
         } catch (error) {
-
-            console.error(
-                "Gemini quiz error:",
-                error
-            );
+            console.error("Gemini quiz error:", error);
 
             res.status(500).json({
-                message:
-                    "Unable to generate AI quiz."
+                message: "Unable to generate AI quiz."
             });
         }
     });
@@ -894,25 +663,17 @@ ${note.NoteContent}
 // --------------------
 
 app.post("/ask-tutor", (req, res) => {
-
-    const {
-        noteId,
-        question
-    } = req.body;
+    const { noteId, question } = req.body;
 
     if (!noteId) {
-
         return res.status(400).json({
-            message:
-                "No study material was selected."
+            message: "No study material was selected."
         });
     }
 
     if (!question || !question.trim()) {
-
         return res.status(400).json({
-            message:
-                "Please enter a question."
+            message: "Please enter a question."
         });
     }
 
@@ -923,30 +684,21 @@ app.post("/ask-tutor", (req, res) => {
     `;
 
     db.get(sql, [noteId], async (err, note) => {
-
         if (err) {
-
-            console.error(
-                "Retrieve note error:",
-                err.message
-            );
+            console.error("Retrieve note error:", err.message);
 
             return res.status(500).json({
-                message:
-                    "Unable to retrieve study material."
+                message: "Unable to retrieve study material."
             });
         }
 
         if (!note) {
-
             return res.status(404).json({
-                message:
-                    "Study material was not found."
+                message: "Study material was not found."
             });
         }
 
         try {
-
             const prompt = `
 You are Marco, an AI study tutor for university students.
 
@@ -970,16 +722,12 @@ Student Question:
 ${question}
             `;
 
-            const response =
-                await generateWithGemini(prompt);
-
+            const response = await generateWithGemini(prompt);
             const answer = response.text;
 
             if (!answer) {
-
                 return res.status(500).json({
-                    message:
-                        "Gemini did not generate an answer."
+                    message: "Gemini did not generate an answer."
                 });
             }
 
@@ -994,45 +742,28 @@ ${question}
                 VALUES (?, ?, datetime('now'))
             `;
 
-            db.run(
-                saveAnswerSql,
-                [noteId, answer],
-                function (saveErr) {
+            db.run(saveAnswerSql, [noteId, answer], function (saveErr) {
+                if (saveErr) {
+                    console.error("Save AI tutor answer error:", saveErr.message);
 
-                    if (saveErr) {
-
-                        console.error(
-                            "Save AI tutor answer error:",
-                            saveErr.message
-                        );
-
-                        return res.status(500).json({
-                            message:
-                                "Answer generated but could not be saved."
-                        });
-                    }
-
-                    res.json({
-                        message:
-                            "Answer generated successfully!",
-                        resultId: this.lastID,
-                        moduleName:
-                            note.ModuleName,
-                        answer: answer
+                    return res.status(500).json({
+                        message: "Answer generated but could not be saved."
                     });
                 }
-            );
+
+                res.json({
+                    message: "Answer generated successfully!",
+                    resultId: this.lastID,
+                    moduleName: note.ModuleName,
+                    answer: answer
+                });
+            });
 
         } catch (error) {
-
-            console.error(
-                "Gemini tutor error:",
-                error
-            );
+            console.error("Gemini tutor error:", error);
 
             res.status(500).json({
-                message:
-                    "Unable to generate AI tutor response."
+                message: "Unable to generate AI tutor response."
             });
         }
     });
@@ -1043,61 +774,40 @@ ${question}
 // PDF TEXT EXTRACTION
 // --------------------
 
-app.post(
-    "/extract-pdf",
-    upload.single("pdf"),
-    async (req, res) => {
-
-        if (!req.file) {
-
-            return res.status(400).json({
-                message:
-                    "Please select a PDF file."
-            });
-        }
-
-        try {
-
-            const parser = new PDFParse({
-                data: req.file.buffer
-            });
-
-            const result =
-                await parser.getText();
-
-            await parser.destroy();
-
-            if (
-                !result.text ||
-                !result.text.trim()
-            ) {
-
-                return res.status(400).json({
-                    message:
-                        "No readable text was found in this PDF."
-                });
-            }
-
-            res.json({
-                message:
-                    "PDF loaded successfully.",
-                text: result.text
-            });
-
-        } catch (error) {
-
-            console.error(
-                "PDF extraction error:",
-                error
-            );
-
-            res.status(500).json({
-                message:
-                    "Unable to read this PDF."
-            });
-        }
+app.post("/extract-pdf", upload.single("pdf"), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({
+            message: "Please select a PDF file."
+        });
     }
-);
+
+    try {
+        const parser = new PDFParse({
+            data: req.file.buffer
+        });
+
+        const result = await parser.getText();
+        await parser.destroy();
+
+        if (!result.text || !result.text.trim()) {
+            return res.status(400).json({
+                message: "No readable text was found in this PDF."
+            });
+        }
+
+        res.json({
+            message: "PDF loaded successfully.",
+            text: result.text
+        });
+
+    } catch (error) {
+        console.error("PDF extraction error:", error);
+
+        res.status(500).json({
+            message: "Unable to read this PDF."
+        });
+    }
+});
 
 
 // --------------------
@@ -1105,21 +815,11 @@ app.post(
 // --------------------
 
 app.listen(PORT, () => {
-
-    console.log(
-        `Marco server running on http://localhost:${PORT}`
-    );
+    console.log(`Marco server running on http://localhost:${PORT}`);
 
     if (process.env.GEMINI_API_KEY) {
-
-        console.log(
-            "Gemini API key loaded successfully."
-        );
-
+        console.log("Gemini API key loaded successfully.");
     } else {
-
-        console.log(
-            "WARNING: Gemini API key was not found."
-        );
+        console.log("WARNING: Gemini API key was not found.");
     }
 });

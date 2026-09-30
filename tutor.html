@@ -4,10 +4,10 @@
     <title>AI Tutor</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
 <div class="sidebar">
-
     <div class="logo-box">
         <div class="logo-circle">M</div>
         <h2>Marco AI Tutor</h2>
@@ -20,15 +20,9 @@
     <a href="tutor.html" class="active">AI Tutor</a>
     <a href="#" onclick="logoutUser()">Logout</a>
 
-    <button
-        type="button"
-        class="theme-toggle"
-        onclick="toggleTheme()"
-    >
-        Toggle Theme
-    </button>
-
+    <button type="button" class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
 </div>
+
 
 <div class="main">
 
@@ -38,38 +32,18 @@
     </div>
 
     <div class="result-box">
-
         <h3>Ask a Question</h3>
 
-        <input
-            type="text"
-            id="tutorQuestion"
-            placeholder="Example: What is process management?"
-        >
+        <input type="text" id="tutorQuestion" placeholder="Example: What is process management?">
 
-        <button
-            type="button"
-            onclick="askTutor()"
-        >
-            Ask Question
-        </button>
-
-        <button
-            type="button"
-            onclick="clearTutor()"
-        >
-            Clear Tutor
-        </button>
+        <button type="button" onclick="askTutor()">Ask Question</button>
+        <button type="button" onclick="clearTutor()">Clear Tutor</button>
 
         <p id="tutorMessage"></p>
 
-        <div
-            id="tutorAnswer"
-            class="answer"
-        >
+        <div id="tutorAnswer" class="answer">
             Ask Marco a question about your saved study material.
         </div>
-
     </div>
 
 </div>

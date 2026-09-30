@@ -4,81 +4,43 @@
     <title>AI Study Assistant - Login</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body class="login-page">
 
     <div class="login-card">
-
         <h1>Marco AI Study Assistant</h1>
 
-        <p>
-            Upload notes, generate summaries,
-            create quizzes and study smarter with AI.
-        </p>
+        <p>Upload notes, generate summaries, create quizzes and study smarter with AI.</p>
 
         <!-- LOGIN SECTION -->
         <div id="loginSection">
+            <input type="email" id="loginEmail" placeholder="Enter Email">
+            <input type="password" id="loginPassword" placeholder="Enter Password">
 
-            <input
-                type="email"
-                id="loginEmail"
-                placeholder="Enter Email"
-            >
-
-            <input
-                type="password"
-                id="loginPassword"
-                placeholder="Enter Password"
-            >
-
-            <button onclick="loginUser()">
-                Login
-            </button>
+            <button onclick="loginUser()">Login</button>
 
             <p>
                 Don't have an account?
                 <a href="#" onclick="showRegister()">Register</a>
             </p>
-
         </div>
 
         <!-- REGISTER SECTION -->
         <div id="registerSection" style="display: none;">
+            <input type="text" id="registerName" placeholder="Full Name">
+            <input type="email" id="registerEmail" placeholder="Enter Email">
+            <input type="password" id="registerPassword" placeholder="Enter Password">
 
-            <input
-                type="text"
-                id="registerName"
-                placeholder="Full Name"
-            >
-
-            <input
-                type="email"
-                id="registerEmail"
-                placeholder="Enter Email"
-            >
-
-            <input
-                type="password"
-                id="registerPassword"
-                placeholder="Enter Password"
-            >
-
-            <button onclick="registerUser()">
-                Register
-            </button>
+            <button onclick="registerUser()">Register</button>
 
             <p>
                 Already have an account?
                 <a href="#" onclick="showLogin()">Login</a>
             </p>
-
         </div>
 
         <p id="message"></p>
-
-        <small>
-            AI Powered Learning Platform
-        </small>
-
+        <small>AI Powered Learning Platform</small>
     </div>
 
     <script src="script.js"></script>

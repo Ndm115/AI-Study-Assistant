@@ -33,7 +33,10 @@ body {
     animation: fadeIn 0.4s ease-in;
 }
 
-/* LOGIN */
+
+/* --------------------
+   LOGIN
+-------------------- */
 
 .login-page {
     min-height: 100vh;
@@ -48,7 +51,7 @@ body {
     background: var(--card);
     padding: 40px;
     border-radius: 24px;
-    box-shadow: 0 20px 50px rgba(0,0,0,.25);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
     text-align: center;
     animation: slideUp 0.5s ease;
 }
@@ -87,7 +90,10 @@ body {
     border-color: var(--blue);
 }
 
-/* SIDEBAR */
+
+/* --------------------
+   SIDEBAR
+-------------------- */
 
 .sidebar {
     position: fixed;
@@ -97,7 +103,7 @@ body {
     height: 100vh;
     background: var(--sidebar);
     padding: 35px 20px;
-    box-shadow: 5px 0 25px rgba(0,0,0,.15);
+    box-shadow: 5px 0 25px rgba(0, 0, 0, 0.15);
 }
 
 .logo-box {
@@ -132,7 +138,7 @@ body {
     padding: 14px 18px;
     border-radius: 12px;
     margin-bottom: 10px;
-    transition: all .3s ease;
+    transition: all 0.3s ease;
     font-weight: 500;
 }
 
@@ -145,7 +151,7 @@ body {
 .sidebar a.active {
     background: linear-gradient(135deg, var(--blue), var(--blue-light));
     color: white;
-    box-shadow: 0 4px 12px rgba(37,99,235,.35);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
 }
 
 .theme-toggle {
@@ -154,7 +160,10 @@ body {
     background: #1e293b;
 }
 
-/* MAIN */
+
+/* --------------------
+   MAIN
+-------------------- */
 
 .main {
     margin-left: 280px;
@@ -204,11 +213,14 @@ body {
     font-weight: 500;
 }
 
-/* CARDS */
+
+/* --------------------
+   CARDS
+-------------------- */
 
 .card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit,minmax(250px,1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 25px;
 }
 
@@ -218,8 +230,8 @@ body {
     background: var(--card);
     border-radius: 20px;
     padding: 25px;
-    box-shadow: 0 10px 30px rgba(0,0,0,.08);
-    transition: .3s;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    transition: 0.3s;
 }
 
 .card:hover,
@@ -237,7 +249,10 @@ body {
     color: var(--muted);
 }
 
-/* FORMS */
+
+/* --------------------
+   FORMS
+-------------------- */
 
 .form-card label {
     display: block;
@@ -277,71 +292,34 @@ body {
     border-radius: 12px;
 }
 
-/* BUTTONS */
+
+/* --------------------
+   BUTTONS
+-------------------- */
 
 button {
-    background: linear-gradient(135deg,var(--blue),var(--blue-light));
+    background: linear-gradient(135deg, var(--blue), var(--blue-light));
     color: white;
     border: none;
     padding: 14px 24px;
     border-radius: 12px;
     cursor: pointer;
     font-weight: 600;
-    transition: .3s;
+    transition: 0.3s;
 }
 
 button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(37,99,235,.3);
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
 }
 
-/* ANIMATIONS */
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
+#studyMaterials button {
+    margin-right: 8px;
 }
 
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(25px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* MOBILE */
-
-@media(max-width: 900px) {
-
-    .sidebar {
-        position: relative;
-        width: 100%;
-        height: auto;
-    }
-
-    .main {
-        margin-left: 0;
-    }
-
-    .login-card {
-        width: 90%;
-    }
-
-    .card-grid {
-        grid-template-columns: 1fr;
-    }
-}
 
 /* --------------------
-   QUIZ FEEDBACK
+   QUIZ
 -------------------- */
 
 .question-feedback {
@@ -371,10 +349,6 @@ button:hover {
     color: #ffaaaa;
 }
 
-/* --------------------
-   QUIZ OPTION ALIGNMENT
--------------------- */
-
 .quiz-option {
     display: flex;
     align-items: flex-start;
@@ -397,7 +371,54 @@ button:hover {
     margin-bottom: 15px;
 }
 
-/*Space between dashboard buttons */
-#studyMaterials button {
-    margin-right: 8px;
+
+/* --------------------
+   ANIMATIONS
+-------------------- */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(25px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* ----------------------------------------
+   Different screens / narrower than 900px
+------------------------------------------- */
+
+@media (max-width: 900px) {
+    .sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+    }
+
+    .main {
+        margin-left: 0;
+    }
+
+    .login-card {
+        width: 90%;
+    }
+
+    .card-grid {
+        grid-template-columns: 1fr;
+    }
 }

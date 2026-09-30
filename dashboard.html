@@ -4,10 +4,10 @@
     <title>Dashboard</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
 <div class="sidebar">
-
     <div class="logo-box">
         <div class="logo-circle">M</div>
         <h2>Marco AI Tutor</h2>
@@ -20,15 +20,9 @@
     <a href="tutor.html">AI Tutor</a>
     <a href="#" onclick="logoutUser()">Logout</a>
 
-    <button
-        type="button"
-        class="theme-toggle"
-        onclick="toggleTheme()"
-    >
-        Toggle Theme
-    </button>
-
+    <button type="button" class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
 </div>
+
 
 <div class="main">
 
@@ -41,7 +35,6 @@
     <!-- DASHBOARD COUNTS -->
 
     <div class="card-grid">
-
         <div class="card">
             <h3>Notes Uploaded</h3>
             <p id="notesCount">0</p>
@@ -56,7 +49,6 @@
             <h3>Current Study Material</h3>
             <p id="currentStudyMaterial">None selected</p>
         </div>
-
     </div>
 
 
@@ -67,10 +59,7 @@
         <p>Select the material you want Marco to use.</p>
     </div>
 
-    <div
-        id="studyMaterials"
-        class="card-grid"
-    >
+    <div id="studyMaterials" class="card-grid">
         <p>Loading study materials...</p>
     </div>
 
@@ -85,74 +74,27 @@
     <div class="card-grid">
 
         <div class="card">
-
             <h3>Upload Notes</h3>
-
-            <p>
-                Upload study material for AI processing.
-            </p>
-
-            <button
-                type="button"
-                onclick="location.href='upload.html'"
-            >
-                Upload
-            </button>
-
+            <p>Upload study material for AI processing.</p>
+            <button type="button" onclick="location.href='upload.html'">Upload</button>
         </div>
 
-
         <div class="card">
-
             <h3>Generate Summary</h3>
-
-            <p>
-                Create concise summaries from your selected notes.
-            </p>
-
-            <button
-                type="button"
-                onclick="location.href='summary.html'"
-            >
-                Summarize
-            </button>
-
+            <p>Create concise summaries from your selected notes.</p>
+            <button type="button" onclick="location.href='summary.html'">Summarize</button>
         </div>
 
-
         <div class="card">
-
             <h3>Quiz Generator</h3>
-
-            <p>
-                Generate revision questions from your selected notes.
-            </p>
-
-            <button
-                type="button"
-                onclick="location.href='quiz.html'"
-            >
-                Create Quiz
-            </button>
-
+            <p>Generate revision questions from your selected notes.</p>
+            <button type="button" onclick="location.href='quiz.html'">Create Quiz</button>
         </div>
 
-
         <div class="card">
-
             <h3>AI Tutor</h3>
-
-            <p>
-                Ask Marco questions about your selected notes.
-            </p>
-
-            <button
-                type="button"
-                onclick="location.href='tutor.html'"
-            >
-                Ask Marco
-            </button>
-
+            <p>Ask Marco questions about your selected notes.</p>
+            <button type="button" onclick="location.href='tutor.html'">Ask Marco</button>
         </div>
 
     </div>
