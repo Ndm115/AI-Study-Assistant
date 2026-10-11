@@ -993,6 +993,91 @@ async function loadDashboard() {
 
 
 // --------------------
+// LOAD SAVED SUMMARIES
+// --------------------
+
+async function loadSavedSummaries() {
+    const container = document.getElementById("savedSummaries");
+    if (!container) return;
+
+    const userId = localStorage.getItem("userId");
+    if (!userId) return;
+
+    try {
+        const response = await fetch(`http://localhost:3000/summaries/${userId}`);
+        if (!response.ok) throw new Error("Unable to load summaries.");
+
+        const data = await response.json();
+        container.innerHTML = "";
+
+        if (data.summaries.length === 0) {
+            container.textContent = "No summaries generated yet.";
+            return;
+        }
+
+        data.summaries.forEach(summary => {
+            const card = document.createElement("div");
+            card.className = "card";
+
+            const title = document.createElement("h3");
+            title.textContent = summary.ModuleName;
+
+            const date = document.createElement("p");
+            date.textContent = "Generated: " +
+                new Date(summary.CreatedAt + "Z").toLocaleDateString();
+
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = "View Summary";
+            button.onclick = function () {
+                viewSavedSummary(summary);
+            };
+
+            card.appendChild(title);
+            card.appendChild(date);
+            card.appendChild(button);
+            container.appendChild(card);
+        });
+
+    } catch (error) {
+        console.error(error);
+        container.textContent = "Unable to load saved summaries.";
+    }
+}
+
+
+// --------------------
+// VIEW SAVED SUMMARY
+// --------------------
+
+function viewSavedSummary(summary) {
+    const viewer = document.getElementById("savedSummaryViewer");
+
+    document.getElementById("savedSummaryTitle").textContent =
+        summary.ModuleName + " Summary";
+
+    document.getElementById("savedSummaryDate").textContent =
+        "Generated: " + new Date(summary.CreatedAt + "Z").toLocaleString();
+
+    document.getElementById("savedSummaryContent").innerHTML =
+        formatMarkdown(summary.Summary);
+
+    viewer.style.display = "block";
+    viewer.scrollIntoView({ behavior: "smooth" });
+}
+
+
+// --------------------
+// CLOSE SAVED SUMMARY
+// --------------------
+
+function closeSavedSummary() {
+    document.getElementById("savedSummaryViewer").style.display = "none";
+}
+
+
+
+// --------------------
 // SELECT STUDY MATERIAL
 // --------------------
 
@@ -1143,6 +1228,7 @@ window.onload = function () {
 
     // Load Dashboard information if this is dashboard.html
     loadDashboard();
+    loadSavedSummaries();
 
     // Restore Summary if this is summary.html
     loadSummaryState();

@@ -30,8 +30,8 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function generateWithGemini(prompt) {
     const models = [
-        "gemini-3.6-flash",
         "gemini-3.5-flash-lite",
+        "gemini-3.6-flash",
         "gemini-3.8-flash"
     ];
 
@@ -340,6 +340,36 @@ app.get("/notes/:userId", (req, res) => {
         });
     });
 });
+
+
+ // --------------------
+ // GET SAVED SUMMARIES
+ // --------------------
+
+app.get("/summaries/:userId", (req, res) => {
+    const userId = req.params.userId;
+
+    const sql = `
+        SELECT ar.ResultID, ar.NoteID, ar.Summary, ar.CreatedAt, n.ModuleName
+        FROM AIResults ar
+        INNER JOIN Notes n ON ar.NoteID = n.NoteID
+        WHERE n.UserID = ?
+        AND ar.Summary IS NOT NULL
+        ORDER BY ar.CreatedAt DESC, ar.ResultID DESC
+    `;
+
+    db.all(sql, [userId], (err, summaries) => {
+        if (err) {
+            console.error("Retrieve summaries error:", err.message);
+            return res.status(500).json({
+                message: "Unable to retrieve saved summaries."
+            });
+        }
+
+        res.json({ summaries: summaries });
+    });
+});
+
 
 
 // --------------------
