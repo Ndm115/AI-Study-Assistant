@@ -1215,11 +1215,22 @@ function toggleTheme() {
 }
 
 
+
 // --------------------
 // PAGE LOAD
 // --------------------
 
 window.onload = function () {
+
+    // Open registration when clicking Get Started on the landing page
+    if (window.location.search.includes("register=true")) {
+        const registerSection = document.getElementById("registerSection");
+
+        if (registerSection) {
+            showRegister();
+        }
+    }
+
     const savedTheme = localStorage.getItem("theme");
 
     if (savedTheme === "dark") {
