@@ -1496,6 +1496,7 @@ app.get(
     })
 );
 
+
 // ============================================================
 // ADMIN - VIEW INDIVIDUAL STUDENT DETAILS
 // ============================================================
@@ -1513,7 +1514,7 @@ app.get(
             });
         }
 
-        // Get the selected student's account information.
+        // Get student information.
         const student = await dbGet(
             `SELECT UserID, FullName, Email, Role
              FROM Users
@@ -1527,20 +1528,37 @@ app.get(
             });
         }
 
-        // Retrieve the student's saved study materials.
+        // Get uploaded study materials.
         const materials = await dbAll(
-            `SELECT ModuleName, UploadDate
+            `SELECT NoteID, ModuleName, UploadDate
              FROM Notes
              WHERE UserID = ?
              ORDER BY UploadDate DESC, NoteID DESC`,
             [userId]
         );
 
-        // Retrieve all completed quizzes for this student.
+        // Get the student's saved AI summaries.
+        const summaries = await dbAll(
+            `SELECT
+                ar.ResultID,
+                n.ModuleName,
+                ar.Summary,
+                ar.CreatedAt
+             FROM AIResults ar
+             INNER JOIN Notes n ON ar.NoteID = n.NoteID
+             WHERE n.UserID = ?
+               AND ar.Summary IS NOT NULL
+             ORDER BY ar.CreatedAt DESC, ar.ResultID DESC`,
+            [userId]
+        );
+
+        // Get completed quizzes with chapter and quiz type.
         const quizzes = await dbAll(
             `SELECT
+                qs.ScoreID,
                 n.ModuleName,
                 qs.QuizType,
+                qs.Chapter,
                 qs.Score,
                 qs.TotalQuestions,
                 qs.Percentage,
@@ -1548,11 +1566,12 @@ app.get(
              FROM QuizScores qs
              INNER JOIN Notes n ON qs.NoteID = n.NoteID
              WHERE qs.UserID = ?
+               AND n.UserID = ?
              ORDER BY qs.CompletedAt DESC, qs.ScoreID DESC`,
-            [userId]
+            [userId, userId]
         );
 
-        // Calculate the student's average quiz percentage.
+        // Calculate average quiz score.
         const average = await dbGet(
             `SELECT ROUND(AVG(Percentage)) AS AverageScore
              FROM QuizScores
@@ -1560,16 +1579,46 @@ app.get(
             [userId]
         );
 
+        // Calculate average performance for each module.
+        const modulePerformance = await dbAll(
+            `SELECT
+                n.ModuleName,
+                COUNT(*) AS QuizzesCompleted,
+                ROUND(AVG(qs.Percentage)) AS AverageScore,
+                MAX(qs.Percentage) AS HighestScore
+             FROM QuizScores qs
+             INNER JOIN Notes n ON qs.NoteID = n.NoteID
+             WHERE qs.UserID = ?
+               AND n.UserID = ?
+             GROUP BY n.ModuleName
+             ORDER BY AverageScore ASC`,
+            [userId, userId]
+        );
+
+        // Get feedback submitted by this student.
+        const feedback = await dbAll(
+            `SELECT Rating, Comment, CreatedAt
+             FROM Feedback
+             WHERE UserID = ?
+             ORDER BY CreatedAt DESC, FeedbackID DESC`,
+            [userId]
+        );
+
         res.json({
             student,
             materials,
+            summaries,
             quizzes,
+            modulePerformance,
+            feedback,
             materialsCount: materials.length,
+            summariesCount: summaries.length,
             quizzesCount: quizzes.length,
             averageScore: average.AverageScore ?? 0
         });
     })
 );
+
 
 // ============================================================
 // ADMIN - VIEW STUDENT ACTIVITY
@@ -1683,6 +1732,130 @@ app.delete(
         });
     })
 );
+
+
+ // ============================================================
+ // ADMIN - BACKUP DATABASE
+ // ============================================================
+
+ app.get("/admin/backup", requireAdmin, asyncRoute(async (req, res) => {
+
+     // Create a unique backup filename using the current date and time.
+     const timestamp = new Date()
+         .toISOString()
+         .replace(/[:.]/g, "-");
+
+     const filename = `marco_backup_${timestamp}.db`;
+
+     // Save the temporary backup in the operating system's temp folder.
+     const path = require("path");
+     const os = require("os");
+     const fs = require("fs");
+
+     const backupPath = path.join(os.tmpdir(), filename);
+
+     try {
+
+         // Use SQLite's backup function to safely copy the live database.
+         await db.backup(backupPath);
+
+         // Download the backup to the administrator's computer.
+         res.download(backupPath, filename, (err) => {
+
+             // Remove the temporary backup after the download finishes.
+             fs.unlink(backupPath, () => {});
+
+             if (err) {
+                 console.error("Backup download failed:", err.message);
+             }
+         });
+
+     } catch (error) {
+
+         // Clean up if the backup fails.
+         fs.unlink(backupPath, () => {});
+
+         console.error("Database backup failed:", error.message);
+
+         if (!res.headersSent) {
+             res.status(500).json({
+                 message: "Database backup failed."
+             });
+         }
+     }
+ }));
+
+
+ // ============================================================
+ // STUDENT - SUBMIT FEEDBACK
+ // ============================================================
+
+ app.post("/feedback", requireStudent, asyncRoute(async (req, res) => {
+
+     const { rating, comment } = req.body;
+
+     // Make sure the student selected a valid rating.
+     if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+         return res.status(400).json({
+             message: "Please select a rating between 1 and 5."
+         });
+     }
+
+     // Make sure the student entered feedback.
+     if (typeof comment !== "string" || !comment.trim()) {
+         return res.status(400).json({
+             message: "Please enter your feedback."
+         });
+     }
+
+     // Save the review under the logged-in student's account.
+     await dbRun(
+         `INSERT INTO Feedback (UserID, Rating, Comment)
+          VALUES (?, ?, ?)`,
+         [req.session.userId, rating, comment.trim()]
+     );
+
+     res.status(201).json({
+         message: "Thank you! Your feedback has been submitted."
+     });
+ }));
+
+
+ // ============================================================
+ // ADMIN - VIEW STUDENT FEEDBACK
+ // ============================================================
+
+ app.get("/admin/feedback", requireAdmin, asyncRoute(async (req, res) => {
+
+     // Get all reviews with student names.
+     const feedback = await dbAll(
+         `SELECT
+             f.FeedbackID,
+             u.FullName,
+             u.Email,
+             f.Rating,
+             f.Comment,
+             f.CreatedAt
+          FROM Feedback f
+          INNER JOIN Users u ON f.UserID = u.UserID
+          ORDER BY f.CreatedAt DESC, f.FeedbackID DESC`
+     );
+
+     // Calculate the total reviews and average rating.
+     const stats = await dbGet(
+         `SELECT
+             COUNT(*) AS totalReviews,
+             ROUND(AVG(Rating), 1) AS averageRating
+          FROM Feedback`
+     );
+
+     res.json({
+         feedback,
+         totalReviews: stats.totalReviews || 0,
+         averageRating: stats.averageRating || 0
+     });
+ }));
+
 
 // ============================================================
 // ERROR HANDLING

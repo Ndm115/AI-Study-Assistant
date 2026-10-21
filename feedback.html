@@ -1,0 +1,81 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Feedback - Marco AI Tutor</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <div class="logo-box">
+            <div class="logo-circle">M</div>
+            <h2>Marco AI Tutor</h2>
+        </div>
+
+        <a href="dashboard.html">Dashboard</a>
+        <a href="upload.html">Upload Notes</a>
+        <a href="summary.html">Summary</a>
+        <a href="quiz.html">Quiz Generator</a>
+        <a href="tutor.html">AI Tutor</a>
+        <a href="feedback.html" class="active">Feedback</a>
+        <a href="#" onclick="logoutUser()">Logout</a>
+
+        <button type="button" class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
+    </div>
+
+    <div class="main">
+
+        <div class="hero-header">
+            <h1>Student Feedback</h1>
+            <p>Share your experience and help us improve Marco AI Study Assistant.</p>
+        </div>
+
+        <div class="section-header">
+            <h2>Share Your Experience</h2>
+            <p>We value your feedback and suggestions.</p>
+        </div>
+
+        <div class="card">
+
+            <h3>Rate Your Experience</h3>
+
+            <p>How would you rate your overall experience with Marco?</p>
+
+            <div class="feedback-stars" id="feedbackStars">
+                <button type="button" onclick="selectFeedbackRating(1)">★</button>
+                <button type="button" onclick="selectFeedbackRating(2)">★</button>
+                <button type="button" onclick="selectFeedbackRating(3)">★</button>
+                <button type="button" onclick="selectFeedbackRating(4)">★</button>
+                <button type="button" onclick="selectFeedbackRating(5)">★</button>
+            </div>
+
+            <p id="selectedFeedbackRating">No rating selected</p>
+
+            <h3>Your Feedback</h3>
+
+            <textarea
+                id="studentFeedbackComment"
+                rows="5"
+                maxlength="2000"
+                placeholder="Tell us what you liked about Marco or what we could improve..."
+                style="width: 100%;"
+            ></textarea>
+
+            <button type="button" onclick="submitStudentFeedback()">
+                Submit Feedback
+            </button>
+
+            <p id="studentFeedbackMessage"></p>
+
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>

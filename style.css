@@ -1035,3 +1035,292 @@ button:hover {
         padding: 20px;
     }
 }
+
+
+/* ============================================================
+   STUDENT FEEDBACK
+   ============================================================ */
+
+.feedback-stars {
+    display: flex;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.feedback-stars button {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 35px;
+    cursor: pointer;
+    padding: 0;
+}
+
+.feedback-stars button.selected {
+    color: #f5b301;
+}
+
+.feedback-stars button:hover {
+    transform: scale(1.1);
+}
+
+
+/* ============================================================
+   ADMIN DASHBOARD SPACING IMPROVEMENTS
+   ============================================================ */
+
+/* More space between admin sections */
+.admin-section {
+    margin-bottom: 40px;
+}
+
+/* More space around statistics */
+.admin-stats-grid {
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+/* Give statistics cards comfortable spacing */
+.admin-stat-card {
+    padding: 25px;
+}
+
+/* Give tables more room */
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* More space inside table cells */
+.admin-table th,
+.admin-table td {
+    padding: 18px 20px;
+    vertical-align: middle;
+}
+
+/* Add spacing between action buttons */
+.admin-table td button {
+    margin-right: 10px;
+    margin-bottom: 5px;
+    padding: 10px 16px;
+}
+
+/* Keep feedback comments readable */
+#adminFeedbackBody td:nth-child(4) {
+    min-width: 250px;
+    max-width: 450px;
+    white-space: normal;
+    line-height: 1.6;
+}
+
+/* Prevent rating stars from wrapping */
+#adminFeedbackBody td:nth-child(3) {
+    white-space: nowrap;
+    min-width: 120px;
+}
+
+/* Keep dates readable */
+#adminFeedbackBody td:nth-child(5) {
+    white-space: nowrap;
+}
+
+/* Prevent the student action buttons from being squeezed */
+#adminUsersBody td:last-child {
+    min-width: 290px;
+    white-space: nowrap;
+}
+
+
+/* ============================================================
+   SUMMARY AND QUIZ SETTINGS IMPROVEMENTS
+   ============================================================ */
+
+/* More breathing room in the summary chapter card */
+.main .card:has(#summaryChapter) {
+    padding: 28px;
+}
+
+.main .card:has(#summaryChapter) h3 {
+    margin-bottom: 12px;
+}
+
+.main .card:has(#summaryChapter) p {
+    margin-bottom: 20px;
+}
+
+/* Better chapter dropdown */
+#summaryChapter,
+#quizChapter,
+#quizType {
+    display: block;
+    width: 100%;
+    max-width: 400px;
+    padding: 12px 15px;
+    margin-top: 10px;
+    margin-bottom: 18px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 15px;
+    background-color: #fff;
+    color: #172b4d;
+    cursor: pointer;
+}
+
+/* Clearer labels */
+label[for="summaryChapter"],
+label[for="quizChapter"],
+label[for="quizType"] {
+    display: block;
+    font-weight: 600;
+    margin-top: 18px;
+    margin-bottom: 5px;
+}
+
+/* Better spacing in quiz settings */
+.quiz-settings {
+    margin-top: 25px;
+    margin-bottom: 25px;
+}
+
+.quiz-settings h3 {
+    margin-bottom: 20px;
+}
+
+.quiz-settings p {
+    margin-top: 0;
+    margin-bottom: 25px;
+    line-height: 1.6;
+}
+
+/* More space between summary content and buttons */
+#summaryText {
+    line-height: 1.7;
+    margin-top: 15px;
+    margin-bottom: 20px;
+}
+
+/* Keep dropdowns readable in dark mode */
+.dark-mode #summaryChapter,
+.dark-mode #quizChapter,
+.dark-mode #quizType {
+    background-color: #1e293b;
+    color: #fff;
+    border-color: #475569;
+}
+
+
+/* ============================================================
+   PERSONALIZED STUDY RECOMMENDATIONS
+   ============================================================ */
+
+/* Space between recommendation cards */
+#studyRecommendations {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin-top: 25px;
+}
+
+/* Make recommendation cards more spacious */
+#studyRecommendations .card {
+    padding: 30px;
+    border-radius: 16px;
+}
+
+/* Module heading */
+#studyRecommendations .card h3 {
+    font-size: 21px;
+    margin-bottom: 20px;
+}
+
+/* Descriptions and statistics */
+#studyRecommendations .card p {
+    line-height: 1.7;
+    margin-bottom: 14px;
+}
+
+/* Section headings within recommendations */
+#studyRecommendations .card h4 {
+    font-size: 17px;
+    margin-top: 25px;
+    margin-bottom: 12px;
+}
+
+/* Better spacing for navigation buttons */
+#studyRecommendations .card button {
+    margin-top: 12px;
+    margin-right: 12px;
+    margin-bottom: 8px;
+    padding: 12px 20px;
+}
+
+/* Allow buttons to wrap neatly on smaller screens */
+@media (max-width: 600px) {
+    #studyRecommendations .card {
+        padding: 20px;
+    }
+
+    #studyRecommendations .card button {
+        width: 100%;
+        margin-right: 0;
+    }
+}
+
+
+/* ADMIN STUDENT SUMMARIES */
+
+.admin-summary-item {
+    margin: 12px 0;
+    padding: 14px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.admin-summary-item summary {
+    cursor: pointer;
+    font-weight: bold;
+    padding: 5px;
+}
+
+.admin-summary-content {
+    margin-top: 15px;
+    padding: 15px;
+    white-space: pre-wrap;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
+
+/* ADMIN - FORMATTED AI SUMMARIES */
+
+.admin-summary-content {
+    margin-top: 15px;
+    padding: 15px;
+    line-height: 1.7;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.admin-summary-content h1,
+.admin-summary-content h2,
+.admin-summary-content h3 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.admin-summary-content p {
+    margin-bottom: 12px;
+}
+
+.admin-summary-content ul,
+.admin-summary-content ol {
+    padding-left: 25px;
+    margin-bottom: 15px;
+}
+
+.admin-summary-content li {
+    margin-bottom: 6px;
+}
+
+.admin-summary-content hr {
+    margin: 20px 0;
+}

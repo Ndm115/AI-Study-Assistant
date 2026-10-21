@@ -2364,6 +2364,7 @@ async function loadAdminDashboard() {
         return;
     }
 
+    searchAdminStudents();
     adminMessage.textContent = "Loading administrator dashboard...";
 
     try {
@@ -2584,22 +2585,28 @@ async function deleteAdminStudent(userId, fullName) {
     }
 }
 
+
 // ============================================================
-// ADMIN - SEARCH STUDENTS
+// ADMIN - SEARCH STUDENTS ACROSS ALL SECTIONS
 // ============================================================
 
 function searchAdminStudents() {
 
-    const search = document.getElementById("adminStudentSearch")
-        .value.toLowerCase().trim();
+    const searchInput = document.getElementById("adminStudentSearch");
 
-    const rows = document.querySelectorAll("#adminUsersBody tr");
+    if (!searchInput) {
+        return;
+    }
 
-    rows.forEach(row => {
+    const search = searchInput.value.toLowerCase().trim();
+
+    // Find matching students using name or email.
+    const matchingNames = new Set();
+
+    document.querySelectorAll("#adminUsersBody tr").forEach(row => {
 
         const cells = row.querySelectorAll("td");
 
-        // Skip loading or empty-state rows.
         if (cells.length < 2) {
             return;
         }
@@ -2607,12 +2614,78 @@ function searchAdminStudents() {
         const name = cells[0].textContent.toLowerCase();
         const email = cells[1].textContent.toLowerCase();
 
-        row.style.display =
-            name.includes(search) || email.includes(search)
-                ? ""
-                : "none";
+        const matches =
+            name.includes(search) || email.includes(search);
+
+        row.style.display = matches ? "" : "none";
+
+        if (matches) {
+            matchingNames.add(name);
+        }
     });
+
+    // Filter recent quiz activity.
+    document.querySelectorAll("#adminActivityBody tr").forEach(row => {
+
+        const cells = row.querySelectorAll("td");
+
+        if (cells.length < 2) {
+            return;
+        }
+
+        const studentName = cells[0].textContent.toLowerCase();
+
+        row.style.display =
+            matchingNames.has(studentName) ? "" : "none";
+    });
+
+    // Filter student feedback and calculate matching ratings.
+    let totalReviews = 0;
+    let totalRating = 0;
+
+    document.querySelectorAll("#adminFeedbackBody tr").forEach(row => {
+
+        const cells = row.querySelectorAll("td");
+
+        if (cells.length < 5) {
+            return;
+        }
+
+        const name = cells[0].textContent.toLowerCase();
+        const email = cells[1].textContent.toLowerCase();
+
+        const matches =
+            name.includes(search) ||
+            email.includes(search) ||
+            matchingNames.has(name);
+
+        row.style.display = matches ? "" : "none";
+
+        if (matches) {
+
+            totalReviews++;
+
+            const stars = cells[2].textContent;
+            totalRating += (stars.match(/★/g) || []).length;
+        }
+    });
+
+    // Update feedback statistics to match the search.
+    const reviewsElement = document.getElementById("adminTotalReviews");
+    const ratingElement = document.getElementById("adminAverageRating");
+
+    if (reviewsElement && ratingElement) {
+
+        reviewsElement.textContent = totalReviews;
+
+        ratingElement.textContent =
+            totalReviews > 0
+                ? (totalRating / totalReviews).toFixed(1) + " / 5"
+                : "0 / 5";
+    }
 }
+
+
 
 // ============================================================
 // ADMIN - VIEW STUDENT DETAILS
@@ -2632,25 +2705,69 @@ async function viewAdminStudentDetails(userId) {
 
         container.innerHTML = "";
 
-        // Helper for safely displaying text.
+        // Safely display text without inserting raw HTML.
         function addText(parent, tag, value) {
             const element = document.createElement(tag);
-            element.textContent = value;
+            element.textContent = value ?? "";
             parent.appendChild(element);
             return element;
         }
 
+        // Create a table with headings and rows.
+        function addTable(headings, rows) {
+
+            const scroll = document.createElement("div");
+            scroll.className = "admin-table-scroll";
+
+            const table = document.createElement("table");
+            table.className = "admin-table";
+
+            const thead = document.createElement("thead");
+            const headingRow = document.createElement("tr");
+
+            headings.forEach(heading => {
+                addText(headingRow, "th", heading);
+            });
+
+            thead.appendChild(headingRow);
+            table.appendChild(thead);
+
+            const tbody = document.createElement("tbody");
+
+            rows.forEach(values => {
+
+                const row = document.createElement("tr");
+
+                values.forEach(value => {
+                    addText(row, "td", value);
+                });
+
+                tbody.appendChild(row);
+            });
+
+            table.appendChild(tbody);
+            scroll.appendChild(table);
+            container.appendChild(scroll);
+        }
+
+        // ----------------------------------------------------
         // STUDENT INFORMATION
+        // ----------------------------------------------------
+
         addText(container, "h3", data.student.FullName);
         addText(container, "p", "Email: " + data.student.Email);
         addText(container, "p", "Role: " + data.student.Role);
 
+        // ----------------------------------------------------
         // STUDENT STATISTICS
+        // ----------------------------------------------------
+
         const stats = document.createElement("div");
         stats.className = "admin-student-stats";
 
         [
             ["Study Materials", data.materialsCount],
+            ["Saved Summaries", data.summariesCount],
             ["Completed Quizzes", data.quizzesCount],
             ["Average Quiz Score", data.averageScore + "%"]
         ].forEach(item => {
@@ -2666,7 +2783,10 @@ async function viewAdminStudentDetails(userId) {
 
         container.appendChild(stats);
 
+        // ----------------------------------------------------
         // STUDY MATERIALS
+        // ----------------------------------------------------
+
         addText(container, "h3", "Study Materials");
 
         if (data.materials.length === 0) {
@@ -2675,17 +2795,91 @@ async function viewAdminStudentDetails(userId) {
 
         } else {
 
-            const list = document.createElement("ul");
-
-            data.materials.forEach(material => {
-                addText(list, "li", material.ModuleName);
-            });
-
-            container.appendChild(list);
+            addTable(
+                ["Module", "Upload Date"],
+                data.materials.map(material => [
+                    material.ModuleName,
+                    material.UploadDate
+                ])
+            );
         }
 
-        // QUIZ HISTORY
-        addText(container, "h3", "Quiz History");
+        // ----------------------------------------------------
+        // SAVED AI SUMMARIES
+        // ----------------------------------------------------
+
+        addText(container, "h3", "Saved AI Summaries");
+
+        if (data.summaries.length === 0) {
+
+            addText(container, "p", "No AI summaries generated yet.");
+
+        } else {
+
+            data.summaries.forEach((summary, index) => {
+
+                const details = document.createElement("details");
+                details.className = "admin-summary-item";
+
+                const heading = document.createElement("summary");
+
+                heading.textContent =
+                    (index + 1) + ". " + summary.ModuleName +
+                    " - " + (summary.CreatedAt || "Unknown date");
+
+                details.appendChild(heading);
+
+                const content = document.createElement("div");
+                content.className = "admin-summary-content";
+
+                // Convert the AI summary's Markdown into formatted HTML.
+                content.innerHTML = marked.parse(summary.Summary);
+
+                details.appendChild(content);
+                container.appendChild(details);
+            });
+        }
+
+        // ----------------------------------------------------
+        // MODULE QUIZ PERFORMANCE
+        // ----------------------------------------------------
+
+        addText(container, "h3", "Module Quiz Performance");
+
+        if (data.modulePerformance.length === 0) {
+
+            addText(container, "p", "No quiz performance available yet.");
+
+        } else {
+
+            addTable(
+                ["Module", "Quizzes", "Average Score", "Highest Score"],
+                data.modulePerformance.map(module => [
+                    module.ModuleName,
+                    module.QuizzesCompleted,
+                    module.AverageScore + "%",
+                    module.HighestScore + "%"
+                ])
+            );
+
+            const weakest = data.modulePerformance[0];
+
+            if (weakest.AverageScore < 60) {
+                addText(
+                    container,
+                    "p",
+                    "Recommended revision area: " +
+                    weakest.ModuleName +
+                    " (" + weakest.AverageScore + "% average)"
+                );
+            }
+        }
+
+        // ----------------------------------------------------
+        // DETAILED QUIZ HISTORY
+        // ----------------------------------------------------
+
+        addText(container, "h3", "Detailed Quiz History");
 
         if (data.quizzes.length === 0) {
 
@@ -2693,45 +2887,42 @@ async function viewAdminStudentDetails(userId) {
 
         } else {
 
-            const scroll = document.createElement("div");
-            scroll.className = "admin-table-scroll";
-
-            const table = document.createElement("table");
-            table.className = "admin-table";
-
-            const thead = document.createElement("thead");
-            const headingRow = document.createElement("tr");
-
-            ["Module", "Quiz Type", "Score", "Percentage", "Date"]
-                .forEach(heading => {
-                    addText(headingRow, "th", heading);
-                });
-
-            thead.appendChild(headingRow);
-            table.appendChild(thead);
-
-            const tbody = document.createElement("tbody");
-
-            data.quizzes.forEach(quiz => {
-
-                const row = document.createElement("tr");
-
-                [
+            addTable(
+                ["Module", "Type", "Chapter", "Score", "Percentage", "Date"],
+                data.quizzes.map(quiz => [
                     quiz.ModuleName,
                     quiz.QuizType,
+                    quiz.Chapter === "all"
+                        ? "All Chapters"
+                        : quiz.Chapter,
                     quiz.Score + "/" + quiz.TotalQuestions,
                     quiz.Percentage + "%",
                     quiz.CompletedAt
-                ].forEach(value => {
-                    addText(row, "td", value ?? "");
-                });
+                ])
+            );
+        }
 
-                tbody.appendChild(row);
-            });
+        // ----------------------------------------------------
+        // STUDENT FEEDBACK
+        // ----------------------------------------------------
 
-            table.appendChild(tbody);
-            scroll.appendChild(table);
-            container.appendChild(scroll);
+        addText(container, "h3", "Student Feedback");
+
+        if (data.feedback.length === 0) {
+
+            addText(container, "p", "No feedback submitted yet.");
+
+        } else {
+
+            addTable(
+                ["Rating", "Feedback", "Date"],
+                data.feedback.map(review => [
+                    "★".repeat(review.Rating) +
+                    "☆".repeat(5 - review.Rating),
+                    review.Comment,
+                    review.CreatedAt
+                ])
+            );
         }
 
     } catch (error) {
@@ -2744,6 +2935,7 @@ async function viewAdminStudentDetails(userId) {
 }
 
 
+
 // ============================================================
 // ADMIN - CLOSE STUDENT DETAILS
 // ============================================================
@@ -2752,3 +2944,230 @@ function closeAdminStudentDetails() {
 
     document.getElementById("adminStudentModal").hidden = true;
 }
+
+// ============================================================
+// ADMIN - DOWNLOAD DATABASE BACKUP
+// ============================================================
+
+async function backupAdminDatabase() {
+
+    try {
+
+        const response = await fetch(
+            "http://127.0.0.1:3000/admin/backup",
+            {
+                method: "GET",
+                credentials: "include"
+            }
+        );
+
+        if (!response.ok) {
+            alert("Database backup failed.");
+            return;
+        }
+
+        // Convert the response into a downloadable file.
+        const blob = await response.blob();
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = "marco_database_backup.db";
+
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        URL.revokeObjectURL(url);
+
+        alert("Database backup downloaded successfully!");
+
+    } catch (error) {
+
+        console.error("Backup error:", error);
+        alert("Unable to download database backup.");
+    }
+}
+
+
+// ============================================================
+// STUDENT FEEDBACK - STAR RATING
+// ============================================================
+
+// Store the rating selected by the student.
+let feedbackRating = 0;
+
+function selectFeedbackRating(rating) {
+
+    feedbackRating = rating;
+
+    const stars = document.querySelectorAll("#feedbackStars button");
+
+    stars.forEach((star, index) => {
+        star.classList.toggle("selected", index < rating);
+    });
+
+    document.getElementById("selectedFeedbackRating").textContent =
+        `You selected ${rating} out of 5 stars`;
+}
+
+
+// ============================================================
+// STUDENT FEEDBACK - SUBMIT REVIEW
+// ============================================================
+
+async function submitStudentFeedback() {
+
+    const comment = document
+        .getElementById("studentFeedbackComment")
+        .value
+        .trim();
+
+    const message = document.getElementById("studentFeedbackMessage");
+
+    // Make sure a rating was selected.
+    if (feedbackRating === 0) {
+        message.textContent = "Please select a star rating.";
+        return;
+    }
+
+    // Make sure feedback was entered.
+    if (!comment) {
+        message.textContent = "Please enter your feedback.";
+        return;
+    }
+
+    try {
+
+        // Send the review to the backend.
+        const response = await fetch("http://127.0.0.1:3000/feedback", {
+            method: "POST",
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                rating: feedbackRating,
+                comment: comment
+            })
+        });
+
+        const data = await response.json();
+
+        message.textContent = data.message || "Unable to submit feedback.";
+
+        if (response.ok) {
+
+            // Clear the form after successful submission.
+            document.getElementById("studentFeedbackComment").value = "";
+
+            feedbackRating = 0;
+
+            document.querySelectorAll("#feedbackStars button")
+                .forEach(star => star.classList.remove("selected"));
+
+            document.getElementById("selectedFeedbackRating").textContent =
+                "No rating selected";
+        }
+
+    } catch (error) {
+
+        console.error("Feedback error:", error);
+
+        message.textContent =
+            "Unable to submit feedback. Please try again.";
+    }
+}
+
+
+// ============================================================
+// ADMIN - LOAD STUDENT FEEDBACK
+// ============================================================
+
+async function loadAdminFeedback() {
+
+    const feedbackBody = document.getElementById("adminFeedbackBody");
+
+    // Only run on the admin dashboard.
+    if (!feedbackBody) {
+        return;
+    }
+
+    try {
+
+        const response = await fetch("http://127.0.0.1:3000/admin/feedback", {
+            credentials: "include"
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            feedbackBody.innerHTML =
+                '<tr><td colspan="5">Unable to load feedback.</td></tr>';
+            return;
+        }
+
+        // Update feedback statistics.
+        document.getElementById("adminTotalReviews").textContent =
+            data.totalReviews;
+
+        document.getElementById("adminAverageRating").textContent =
+            data.averageRating + " / 5";
+
+        // Clear the table.
+        feedbackBody.innerHTML = "";
+
+        // No feedback submitted yet.
+        if (data.feedback.length === 0) {
+
+            feedbackBody.innerHTML =
+                '<tr><td colspan="5">No student feedback submitted yet.</td></tr>';
+
+            return;
+        }
+
+        // Display each review.
+        data.feedback.forEach(review => {
+
+            const row = document.createElement("tr");
+
+            const nameCell = document.createElement("td");
+            nameCell.textContent = review.FullName;
+
+            const emailCell = document.createElement("td");
+            emailCell.textContent = review.Email;
+
+            const ratingCell = document.createElement("td");
+            ratingCell.textContent =
+                "★".repeat(review.Rating) +
+                "☆".repeat(5 - review.Rating);
+
+            const commentCell = document.createElement("td");
+            commentCell.textContent = review.Comment;
+
+            const dateCell = document.createElement("td");
+
+            dateCell.textContent = review.CreatedAt
+                ? new Date(review.CreatedAt.replace(" ", "T") + "Z").toLocaleString()
+                : "Unknown";
+
+            row.appendChild(nameCell);
+            row.appendChild(emailCell);
+            row.appendChild(ratingCell);
+            row.appendChild(commentCell);
+            row.appendChild(dateCell);
+
+            feedbackBody.appendChild(row);
+        });
+        searchAdminStudents();
+
+    } catch (error) {
+
+        console.error("Admin feedback error:", error);
+
+        feedbackBody.innerHTML =
+            '<tr><td colspan="5">Could not connect to the server.</td></tr>';
+    }
+}
+

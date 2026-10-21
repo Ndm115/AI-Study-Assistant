@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -24,6 +25,7 @@
             <a href="#adminOverview" class="active">Overview</a>
             <a href="#studentManagement">Student Management</a>
             <a href="#quizActivity">Quiz Activity</a>
+            <a href="#studentFeedback">Student Feedback</a>
         </nav>
 
         <button class="theme-toggle" onclick="toggleTheme()">
@@ -110,12 +112,23 @@
 
         </section>
 
+        <!-- DATABASE BACKUP -->
+        <section class="admin-section">
+            <h2>Database Management</h2>
+            <p>Download a backup of the Marco AI Study Assistant database.</p>
+
+            <button type="button" onclick="backupAdminDatabase()">
+                Backup Database
+            </button>
+        </section>
+
         <!-- STUDENT MANAGEMENT -->
         <section id="studentManagement" class="admin-section">
 
             <!-- SEARCH STUDENTS -->
             <div class="admin-search">
-                <input type="text" id="adminStudentSearch" placeholder="Search students by name or email..."
+                <input type="text" id="adminStudentSearch"
+                    placeholder="Search students by name or email..."
                     oninput="searchAdminStudents()">
             </div>
 
@@ -193,6 +206,60 @@
 
         </section>
 
+        <!-- STUDENT FEEDBACK -->
+        <section id="studentFeedback" class="admin-section">
+
+            <div class="admin-section-heading">
+                <h2>Student Feedback</h2>
+                <p>View student ratings, reviews, and suggestions for improving Marco.</p>
+            </div>
+
+            <!-- FEEDBACK STATISTICS -->
+            <div class="admin-stats-grid">
+
+                <div class="card admin-stat-card">
+                    <h3>Total Reviews</h3>
+                    <p id="adminTotalReviews">0</p>
+                </div>
+
+                <div class="card admin-stat-card">
+                    <h3>Average Rating</h3>
+                    <p id="adminAverageRating">0 / 5</p>
+                </div>
+
+            </div>
+
+            <!-- FEEDBACK TABLE -->
+            <div class="admin-table-card">
+
+                <div class="admin-table-scroll">
+
+                    <table class="admin-table">
+
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Email</th>
+                                <th>Rating</th>
+                                <th>Feedback</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="adminFeedbackBody">
+                            <tr>
+                                <td colspan="5">Loading student feedback...</td>
+                            </tr>
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </section>
+
     </main>
 
     <!-- STUDENT DETAILS POPUP -->
@@ -215,12 +282,14 @@
 
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="script.js"></script>
 
     <script>
         // Load administrator data when the page is ready.
         window.addEventListener("load", function () {
             loadAdminDashboard();
+            loadAdminFeedback();
         });
     </script>
 
