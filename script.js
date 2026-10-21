@@ -80,7 +80,7 @@ async function registerUser() {
 
     try {
 
-        const response = await fetch("http://127.0.0.1:3000/register", {
+        const response = await fetch("http://localhost:3000/register", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -135,7 +135,7 @@ async function loginUser() {
 
     try {
 
-        const response = await fetch("http://127.0.0.1:3000/login", {
+        const response = await fetch("http://localhost:3000/login", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -184,7 +184,7 @@ async function saveNote() {
 
     try {
 
-        const response = await fetch("http://127.0.0.1:3000/notes", {
+        const response = await fetch("http://localhost:3000/notes", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -267,7 +267,7 @@ async function handleFileUpload() {
         try {
 
             const response = await fetch(
-                "http://127.0.0.1:3000/extract-pdf",
+                "http://localhost:3000/extract-pdf",
                 {
                     method: "POST",
                     body: formData
@@ -713,7 +713,7 @@ async function loadSummaryChapters() {
 
         // Reuse the chapter endpoint from the Quiz Generator.
         const response = await fetch(
-            `http://127.0.0.1:3000/chapters/${noteId}`
+            `http://localhost:3000/chapters/${noteId}`
         );
 
         const data = await response.json();
@@ -799,7 +799,7 @@ async function generateSummary(event) {
     try {
 
         const response = await fetch(
-            "http://127.0.0.1:3000/generate-summary",
+            "http://localhost:3000/generate-summary",
             {
                 method: "POST",
                 headers: {
@@ -885,7 +885,7 @@ async function loadQuizChapters() {
     try {
 
         const response = await fetch(
-            `http://127.0.0.1:3000/chapters/${noteId}`
+            `http://localhost:3000/chapters/${noteId}`
         );
 
         const data = await response.json();
@@ -948,7 +948,7 @@ async function generateQuiz() {
     try {
 
         const response = await fetch(
-            "http://127.0.0.1:3000/generate-quiz",
+            "http://localhost:3000/generate-quiz",
             {
                 method: "POST",
                 headers: {
@@ -1155,7 +1155,7 @@ async function submitQuiz() {
     try {
 
         const response = await fetch(
-            "http://127.0.0.1:3000/save-quiz-score",
+            "http://localhost:3000/save-quiz-score",
             {
                 method: "POST",
                 headers: {
@@ -1220,7 +1220,7 @@ async function askTutor() {
     try {
 
         const response = await fetch(
-            "http://127.0.0.1:3000/ask-tutor",
+            "http://localhost:3000/ask-tutor",
             {
                 method: "POST",
                 headers: {
@@ -1281,7 +1281,7 @@ async function loadDashboard() {
     try {
 
         const response = await fetch(
-            `http://127.0.0.1:3000/notes/${userId}`
+            `http://localhost:3000/notes/${userId}`
         );
 
         const data = await response.json();
@@ -1392,7 +1392,7 @@ async function loadQuizProgress() {
     try {
 
         const response = await fetch(
-            `http://127.0.0.1:3000/quiz-progress/${userId}`
+            `http://localhost:3000/quiz-progress/${userId}`
         );
 
         const data = await response.json();
@@ -1897,7 +1897,7 @@ async function loadSavedSummaries() {
     try {
 
         const response = await fetch(
-            `http://127.0.0.1:3000/summaries/${userId}`
+            `http://localhost:3000/summaries/${userId}`
         );
 
         if (!response.ok) {
@@ -2017,7 +2017,7 @@ async function deleteStudyMaterial(noteId, moduleName) {
     try {
 
         const response = await fetch(
-            `http://127.0.0.1:3000/notes/${noteId}`,
+            `http://localhost:3000/notes/${noteId}`,
             {
                 method: "DELETE"
             }
@@ -2172,7 +2172,7 @@ const originalFetch = window.fetch.bind(window);
 
 window.fetch = function (url, options = {}) {
 
-    if (String(url).startsWith("http://127.0.0.1:3000/")) {
+    if (String(url).startsWith("http://localhost:3000/")) {
 
         return originalFetch(url, {
             ...options,
@@ -2208,7 +2208,7 @@ loginUser = async function () {
 
     try {
 
-        const response = await fetch("http://127.0.0.1:3000/login", {
+        const response = await fetch("http://localhost:3000/login", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -2254,7 +2254,7 @@ logoutUser = async function () {
 
     try {
 
-        await fetch("http://127.0.0.1:3000/logout", {
+        await fetch("http://localhost:3000/logout", {
             method: "POST"
         });
 
@@ -2276,6 +2276,10 @@ logoutUser = async function () {
 
 async function checkLoginSession() {
 
+        if (window.location.protocol === "file:") {
+        return;
+    }
+
     const page = window.location.pathname.split("/").pop();
 
     // Login and registration page does not require a session.
@@ -2285,7 +2289,9 @@ async function checkLoginSession() {
 
     try {
 
-        const response = await fetch("http://127.0.0.1:3000/auth/me");
+        const response = await fetch("http://localhost:3000/auth/me", {
+            credentials: "include"
+        });
 
         if (!response.ok) {
 
@@ -2328,7 +2334,7 @@ async function checkLoginSession() {
 async function adminFetch(endpoint, options = {}) {
 
     const response = await fetch(
-        "http://127.0.0.1:3000" + endpoint,
+        "http://localhost:3000" + endpoint,
         options
     );
 
@@ -2954,7 +2960,7 @@ async function backupAdminDatabase() {
     try {
 
         const response = await fetch(
-            "http://127.0.0.1:3000/admin/backup",
+            "http://localhost:3000/admin/backup",
             {
                 method: "GET",
                 credentials: "include"
@@ -3041,7 +3047,7 @@ async function submitStudentFeedback() {
     try {
 
         // Send the review to the backend.
-        const response = await fetch("http://127.0.0.1:3000/feedback", {
+        const response = await fetch("http://localhost:3000/feedback", {
             method: "POST",
             credentials: "include",
             headers: {
@@ -3096,7 +3102,7 @@ async function loadAdminFeedback() {
 
     try {
 
-        const response = await fetch("http://127.0.0.1:3000/admin/feedback", {
+        const response = await fetch("http://localhost:3000/admin/feedback", {
             credentials: "include"
         });
 

@@ -1,5 +1,6 @@
 
 const express = require("express");
+const path = require("path");
 const cors = require("cors");
 const session = require("express-session");
 const sqlite3 = require("sqlite3").verbose();
@@ -108,6 +109,42 @@ app.use(session({
         maxAge: 24 * 60 * 60 * 1000
     }
 }));
+
+// ============================================================
+// SERVE MARCO FRONTEND
+// ============================================================
+
+// Serve HTML, CSS, JavaScript and other frontend files.
+const path = require("path");
+
+const frontendFiles = [
+    "index.html",
+    "landing.html",
+    "dashboard.html",
+    "admin.html",
+    "upload.html",
+    "summary.html",
+    "quiz.html",
+    "tutor.html",
+    "feedback.html",
+    "script.js",
+    "style.css"
+];
+
+frontendFiles.forEach(file => {
+    app.get("/" + file, (req, res) => {
+        res.sendFile(path.join(__dirname, file));
+    });
+});
+
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "index.html"));
+});
+
+// Open the login page when visiting localhost:3000.
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "index.html"));
+});
 
 // ============================================================
 // DATABASE
@@ -233,14 +270,6 @@ async function getOwnedNote(noteId, userId) {
         [noteId, userId]
     );
 }
-
-// ============================================================
-// TEST ROUTE
-// ============================================================
-
-app.get("/", (req, res) => {
-    res.send("Marco AI Study Assistant backend is running!");
-});
 
 // ============================================================
 // REGISTER
