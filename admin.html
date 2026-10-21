@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Dashboard - Marco AI Study Assistant</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="admin-page">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <div class="logo-box">
+            <div class="logo-circle">M</div>
+            <h2>Marco AI<br>Study Assistant</h2>
+        </div>
+
+        <nav>
+            <a href="#adminOverview" class="active">Overview</a>
+            <a href="#studentManagement">Student Management</a>
+            <a href="#quizActivity">Quiz Activity</a>
+        </nav>
+
+        <button class="theme-toggle" onclick="toggleTheme()">
+            Toggle Theme
+        </button>
+
+        <button class="admin-logout" onclick="logoutUser()">
+            Logout
+        </button>
+
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main admin-main">
+
+        <!-- PAGE HEADER -->
+        <section id="adminOverview" class="admin-page-header">
+
+            <div>
+                <p class="admin-eyebrow">ADMINISTRATION</p>
+                <h1>Admin Dashboard</h1>
+                <p class="subtitle">
+                    Monitor student activity and manage accounts.
+                </p>
+            </div>
+
+            <span class="admin-role-label">Administrator</span>
+
+        </section>
+
+        <p id="adminMessage" class="admin-message"></p>
+
+        <!-- SYSTEM STATISTICS -->
+        <section class="admin-section">
+
+            <div class="admin-section-heading">
+                <h2>System Statistics</h2>
+                <p>Overview of activity across Marco AI Study Assistant.</p>
+            </div>
+
+            <div class="admin-stats-grid">
+
+                <div class="card admin-stat-card">
+                    <h3>Total Users</h3>
+                    <p id="adminTotalUsers">0</p>
+                </div>
+
+                <div class="card admin-stat-card">
+                    <h3>Total Students</h3>
+                    <p id="adminTotalStudents">0</p>
+                </div>
+
+                <div class="card admin-stat-card">
+                    <h3>Total Administrators</h3>
+                    <p id="adminTotalAdmins">0</p>
+                </div>
+
+                <div class="card admin-stat-card">
+                    <h3>Study Materials</h3>
+                    <p id="adminTotalNotes">0</p>
+                </div>
+
+                <div class="card admin-stat-card">
+                    <h3>AI Summaries</h3>
+                    <p id="adminTotalSummaries">0</p>
+                </div>
+
+                <div class="card admin-stat-card">
+                    <h3>Completed Quizzes</h3>
+                    <p id="adminTotalQuizzes">0</p>
+                </div>
+
+                <div class="card admin-stat-card">
+                    <h3>Average Quiz Score</h3>
+                    <p id="adminAverageQuizScore">0%</p>
+                </div>
+
+                <div class="card admin-stat-card">
+                    <h3>AI Tutor Questions</h3>
+                    <p id="adminTutorQuestions">0</p>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- STUDENT MANAGEMENT -->
+        <section id="studentManagement" class="admin-section">
+
+            <!-- SEARCH STUDENTS -->
+            <div class="admin-search">
+                <input type="text" id="adminStudentSearch" placeholder="Search students by name or email..."
+                    oninput="searchAdminStudents()">
+            </div>
+
+            <div class="admin-section-heading">
+                <h2>Student Management</h2>
+                <p>View registered users and manage student accounts.</p>
+            </div>
+
+            <div class="admin-table-card">
+
+                <div class="admin-table-scroll">
+
+                    <table class="admin-table">
+
+                        <thead>
+                            <tr>
+                                <th>Student Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Study Materials</th>
+                                <th>Quizzes Completed</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="adminUsersBody">
+                            <tr>
+                                <td colspan="6">Loading students...</td>
+                            </tr>
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- RECENT QUIZ ACTIVITY -->
+        <section id="quizActivity" class="admin-section">
+
+            <div class="admin-section-heading">
+                <h2>Recent Quiz Activity</h2>
+                <p>Review students' latest quiz results.</p>
+            </div>
+
+            <div class="admin-table-card">
+
+                <div class="admin-table-scroll">
+
+                    <table class="admin-table">
+
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Module</th>
+                                <th>Score</th>
+                                <th>Percentage</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="adminActivityBody">
+                            <tr>
+                                <td colspan="5">Loading activity...</td>
+                            </tr>
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- STUDENT DETAILS POPUP -->
+    <div id="adminStudentModal" class="admin-modal" hidden>
+
+        <div class="admin-modal-content">
+
+            <div class="admin-modal-header">
+                <h2>Student Details</h2>
+                <button type="button" onclick="closeAdminStudentDetails()">
+                    Close
+                </button>
+            </div>
+
+            <div id="adminStudentDetails">
+                Loading student information...
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+
+    <script>
+        // Load administrator data when the page is ready.
+        window.addEventListener("load", function () {
+            loadAdminDashboard();
+        });
+    </script>
+
+</body>
+
+</html>

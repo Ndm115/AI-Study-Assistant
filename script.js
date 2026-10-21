@@ -1,6 +1,7 @@
-// --------------------
+
+// ============================================================
 // NAVIGATION
-// --------------------
+// ============================================================
 
 function goToDashboard() {
     window.location.href = "dashboard.html";
@@ -22,10 +23,9 @@ function goToTutor() {
     window.location.href = "tutor.html";
 }
 
-
-// --------------------
+// ============================================================
 // LOGIN / REGISTER DISPLAY
-// --------------------
+// ============================================================
 
 function showRegister() {
     document.getElementById("loginSection").style.display = "none";
@@ -39,12 +39,12 @@ function showLogin() {
     document.getElementById("message").textContent = "";
 }
 
-
-// --------------------
+// ============================================================
 // REGISTER
-// --------------------
+// ============================================================
 
 async function registerUser() {
+
     const fullName = document.getElementById("registerName").value.trim();
     const email = document.getElementById("registerEmail").value.trim();
     const password = document.getElementById("registerPassword").value;
@@ -55,8 +55,32 @@ async function registerUser() {
         return;
     }
 
+    if (fullName.length < 2) {
+        message.textContent = "Full name must contain at least 2 characters.";
+        return;
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailPattern.test(email)) {
+        message.textContent = "Please enter a valid email address.";
+        return;
+    }
+
+    if (
+        password.length < 8 ||
+        !/[A-Z]/.test(password) ||
+        !/[a-z]/.test(password) ||
+        !/[0-9]/.test(password)
+    ) {
+        message.textContent =
+            "Password must contain at least 8 characters, an uppercase letter, a lowercase letter and a number.";
+        return;
+    }
+
     try {
-        const response = await fetch("http://localhost:3000/register", {
+
+        const response = await fetch("http://127.0.0.1:3000/register", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -65,16 +89,19 @@ async function registerUser() {
         });
 
         const data = await response.json();
+
         message.textContent = data.message;
 
         if (response.ok) {
+
             document.getElementById("registerName").value = "";
             document.getElementById("registerEmail").value = "";
             document.getElementById("registerPassword").value = "";
 
             setTimeout(() => {
                 showLogin();
-                document.getElementById("message").textContent = "Account created successfully. You can now log in.";
+                document.getElementById("message").textContent =
+                    "Account created successfully. You can now log in.";
             }, 1000);
         }
 
@@ -84,12 +111,12 @@ async function registerUser() {
     }
 }
 
-
-// --------------------
+// ============================================================
 // LOGIN
-// --------------------
+// ============================================================
 
 async function loginUser() {
+
     const email = document.getElementById("loginEmail").value.trim();
     const password = document.getElementById("loginPassword").value;
     const message = document.getElementById("message");
@@ -99,8 +126,16 @@ async function loginUser() {
         return;
     }
 
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailPattern.test(email)) {
+        message.textContent = "Please enter a valid email address.";
+        return;
+    }
+
     try {
-        const response = await fetch("http://localhost:3000/login", {
+
+        const response = await fetch("http://127.0.0.1:3000/login", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -126,12 +161,12 @@ async function loginUser() {
     }
 }
 
-
-// --------------------
+// ============================================================
 // SAVE STUDY MATERIAL
-// --------------------
+// ============================================================
 
 async function saveNote() {
+
     const userId = localStorage.getItem("userId");
     const moduleName = document.getElementById("moduleName").value.trim();
     const noteContent = document.getElementById("noteContent").value.trim();
@@ -148,22 +183,28 @@ async function saveNote() {
     }
 
     try {
-        const response = await fetch("http://localhost:3000/notes", {
+
+        const response = await fetch("http://127.0.0.1:3000/notes", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ userId, moduleName, noteContent })
+            body: JSON.stringify({
+                userId,
+                moduleName,
+                noteContent
+            })
         });
 
         const data = await response.json();
+
         message.textContent = data.message;
 
         if (response.ok) {
+
             localStorage.setItem("currentNoteId", data.noteId);
             localStorage.setItem("currentModuleName", moduleName);
 
-            // Clear the upload draft after it has been saved
             localStorage.removeItem("marco_upload_module");
             localStorage.removeItem("marco_upload_notes");
 
@@ -176,12 +217,12 @@ async function saveNote() {
     }
 }
 
-
-// --------------------
+// ============================================================
 // FILE UPLOAD
-// --------------------
+// ============================================================
 
 async function handleFileUpload() {
+
     const fileInput = document.getElementById("noteFile");
     const file = fileInput.files[0];
     const message = document.getElementById("uploadMessage");
@@ -194,11 +235,16 @@ async function handleFileUpload() {
 
     // TXT FILE
     if (fileName.endsWith(".txt")) {
+
         const reader = new FileReader();
 
         reader.onload = function (event) {
-            document.getElementById("noteContent").value = event.target.result;
+
+            document.getElementById("noteContent").value =
+                event.target.result;
+
             saveUploadDraft();
+
             message.textContent = "TXT file loaded successfully.";
         };
 
@@ -212,16 +258,21 @@ async function handleFileUpload() {
 
     // PDF FILE
     if (fileName.endsWith(".pdf")) {
+
         message.textContent = "Reading PDF...";
 
         const formData = new FormData();
         formData.append("pdf", file);
 
         try {
-            const response = await fetch("http://localhost:3000/extract-pdf", {
-                method: "POST",
-                body: formData
-            });
+
+            const response = await fetch(
+                "http://127.0.0.1:3000/extract-pdf",
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
 
             const data = await response.json();
 
@@ -231,7 +282,9 @@ async function handleFileUpload() {
             }
 
             document.getElementById("noteContent").value = data.text;
+
             saveUploadDraft();
+
             message.textContent = "PDF loaded successfully.";
 
         } catch (error) {
@@ -245,47 +298,37 @@ async function handleFileUpload() {
     message.textContent = "Please upload a TXT or PDF file.";
 }
 
-
-// --------------------
+// ============================================================
 // SIMPLE MARKDOWN FORMATTER
-// --------------------
+// ============================================================
 
 function formatMarkdown(text) {
+
     return text
-        // Escape HTML first
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
 
-        // Remove escaped Markdown characters
         .replace(/\\\*/g, "*")
         .replace(/\\\|/g, "|")
         .replace(/\\\\/g, "\\")
 
-        // Headings
-        .replace(/^### (.*$)/gm, "<h4>$1</h4>")
-        .replace(/^## (.*$)/gm, "<h3>$1</h3>")
-        .replace(/^# (.*$)/gm, "<h2>$1</h2>")
+        .replace(/^### (.*)$/gm, "<h4>$1</h4>")
+        .replace(/^## (.*)$/gm, "<h3>$1</h3>")
+        .replace(/^# (.*)$/gm, "<h2>$1</h2>")
 
-        // Bold
         .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-
-        // Bullet points
-        .replace(/^\* (.*$)/gm, "<li>$1</li>")
-
-        // Horizontal lines
+        .replace(/^\* (.*)$/gm, "<li>$1</li>")
         .replace(/^---$/gm, "<hr>")
-
-        // New lines
         .replace(/\n/g, "<br>");
 }
-
 
 // ============================================================
 // PAGE CONTENT PERSISTENCE
 // ============================================================
 
 function getStudyStorageKey(type) {
+
     const noteId = localStorage.getItem("currentNoteId");
 
     if (!noteId) {
@@ -295,12 +338,12 @@ function getStudyStorageKey(type) {
     return "marco_" + type + "_" + noteId;
 }
 
-
-// --------------------
+// ============================================================
 // SUMMARY STORAGE
-// --------------------
+// ============================================================
 
 function saveSummaryState(moduleName, summary) {
+
     const key = getStudyStorageKey("summary");
 
     if (!key) {
@@ -314,9 +357,9 @@ function saveSummaryState(moduleName, summary) {
 }
 
 function loadSummaryState() {
+
     const summaryText = document.getElementById("summaryText");
 
-    // We are not on summary.html
     if (!summaryText) {
         return;
     }
@@ -334,13 +377,16 @@ function loadSummaryState() {
     }
 
     try {
-        const data = JSON.parse(saved);
-        const summaryTitle = document.getElementById("summaryTitle");
-        const summaryMessage = document.getElementById("summaryMessage");
 
-        summaryTitle.textContent = data.moduleName + " Summary";
+        const data = JSON.parse(saved);
+
+        document.getElementById("summaryTitle").textContent =
+            data.moduleName + " Summary";
+
         summaryText.innerHTML = formatMarkdown(data.summary);
-        summaryMessage.textContent = "Saved summary restored.";
+
+        document.getElementById("summaryMessage").textContent =
+            "Saved summary restored.";
 
     } catch (error) {
         console.error("Unable to restore summary:", error);
@@ -348,6 +394,7 @@ function loadSummaryState() {
 }
 
 function clearSummary() {
+
     const key = getStudyStorageKey("summary");
 
     if (key) {
@@ -363,7 +410,8 @@ function clearSummary() {
     }
 
     if (summaryText) {
-        summaryText.textContent = "Click the button below to generate a summary from your study material.";
+        summaryText.textContent =
+            "Click the button below to generate a summary from your study material.";
     }
 
     if (summaryMessage) {
@@ -371,12 +419,17 @@ function clearSummary() {
     }
 }
 
-
-// --------------------
+// ============================================================
 // QUIZ STORAGE
-// --------------------
+// ============================================================
+
+let currentQuiz = [];
+let currentQuizType = "multiple";
+let currentQuizChapter = "all";
+let quizSubmitted = false;
 
 function saveQuizState(moduleName) {
+
     const key = getStudyStorageKey("quiz");
 
     if (!key) {
@@ -385,14 +438,17 @@ function saveQuizState(moduleName) {
 
     localStorage.setItem(key, JSON.stringify({
         moduleName: moduleName,
-        questions: currentQuiz
+        questions: currentQuiz,
+        quizType: currentQuizType,
+        chapter: currentQuizChapter,
+        submitted: quizSubmitted
     }));
 }
 
 function loadQuizState() {
+
     const quizContainer = document.getElementById("quizContainer");
 
-    // We are not on quiz.html
     if (!quizContainer) {
         return;
     }
@@ -410,20 +466,37 @@ function loadQuizState() {
     }
 
     try {
+
         const data = JSON.parse(saved);
 
-        if (!data.questions || !Array.isArray(data.questions)) {
+        if (!Array.isArray(data.questions)) {
             return;
         }
 
         currentQuiz = data.questions;
+        currentQuizType = data.quizType || "multiple";
+        currentQuizChapter = data.chapter ?? "all";
+        quizSubmitted = data.submitted || false;
 
-        document.getElementById("quizTitle").textContent = data.moduleName + " Quiz";
-        document.getElementById("quizMessage").textContent = "Choose one answer for each question.";
+        document.getElementById("quizTitle").textContent =
+            data.moduleName + " Quiz";
+
+        document.getElementById("quizMessage").textContent =
+            quizSubmitted
+                ? "This quiz has already been submitted."
+                : "Choose one answer for each question.";
 
         displayQuiz();
 
-        document.getElementById("submitQuizButton").style.display = "inline-block";
+        if (quizSubmitted) {
+            quizContainer.querySelectorAll('input[type="radio"]')
+                .forEach(radio => {
+                    radio.disabled = true;
+                });
+        }
+
+        document.getElementById("submitQuizButton").style.display =
+            quizSubmitted ? "none" : "inline-block";
 
     } catch (error) {
         console.error("Unable to restore quiz:", error);
@@ -431,6 +504,7 @@ function loadQuizState() {
 }
 
 function clearQuiz() {
+
     const key = getStudyStorageKey("quiz");
 
     if (key) {
@@ -438,6 +512,9 @@ function clearQuiz() {
     }
 
     currentQuiz = [];
+    currentQuizType = "multiple";
+    currentQuizChapter = "all";
+    quizSubmitted = false;
 
     const quizTitle = document.getElementById("quizTitle");
     const quizMessage = document.getElementById("quizMessage");
@@ -450,7 +527,8 @@ function clearQuiz() {
     }
 
     if (quizMessage) {
-        quizMessage.textContent = "Generate a quiz from your saved study material.";
+        quizMessage.textContent =
+            "Generate a quiz from your saved study material.";
     }
 
     if (quizContainer) {
@@ -466,12 +544,12 @@ function clearQuiz() {
     }
 }
 
-
-// --------------------
+// ============================================================
 // TUTOR STORAGE
-// --------------------
+// ============================================================
 
 function saveTutorState(question, answer) {
+
     const key = getStudyStorageKey("tutor");
 
     if (!key) {
@@ -485,9 +563,9 @@ function saveTutorState(question, answer) {
 }
 
 function loadTutorState() {
+
     const tutorAnswer = document.getElementById("tutorAnswer");
 
-    // We are not on tutor.html
     if (!tutorAnswer) {
         return;
     }
@@ -505,11 +583,15 @@ function loadTutorState() {
     }
 
     try {
+
         const data = JSON.parse(saved);
 
         document.getElementById("tutorQuestion").value = data.question;
+
         tutorAnswer.innerHTML = formatMarkdown(data.answer);
-        document.getElementById("tutorMessage").textContent = "Saved answer restored.";
+
+        document.getElementById("tutorMessage").textContent =
+            "Saved answer restored.";
 
     } catch (error) {
         console.error("Unable to restore tutor answer:", error);
@@ -517,6 +599,7 @@ function loadTutorState() {
 }
 
 function clearTutor() {
+
     const key = getStudyStorageKey("tutor");
 
     if (key) {
@@ -532,7 +615,8 @@ function clearTutor() {
     }
 
     if (tutorAnswer) {
-        tutorAnswer.textContent = "Ask Marco a question about your saved study material.";
+        tutorAnswer.textContent =
+            "Ask Marco a question about your saved study material.";
     }
 
     if (tutorMessage) {
@@ -540,16 +624,15 @@ function clearTutor() {
     }
 }
 
-
-// --------------------
+// ============================================================
 // UPLOAD FORM STORAGE
-// --------------------
+// ============================================================
 
 function saveUploadDraft() {
+
     const moduleName = document.getElementById("moduleName");
     const noteContent = document.getElementById("noteContent");
 
-    // We are not on upload.html
     if (!moduleName || !noteContent) {
         return;
     }
@@ -559,22 +642,26 @@ function saveUploadDraft() {
 }
 
 function loadUploadDraft() {
+
     const moduleName = document.getElementById("moduleName");
     const noteContent = document.getElementById("noteContent");
 
-    // We are not on upload.html
     if (!moduleName || !noteContent) {
         return;
     }
 
-    moduleName.value = localStorage.getItem("marco_upload_module") || "";
-    noteContent.value = localStorage.getItem("marco_upload_notes") || "";
+    moduleName.value =
+        localStorage.getItem("marco_upload_module") || "";
+
+    noteContent.value =
+        localStorage.getItem("marco_upload_notes") || "";
 
     moduleName.addEventListener("input", saveUploadDraft);
     noteContent.addEventListener("input", saveUploadDraft);
 }
 
 function clearUploadForm() {
+
     localStorage.removeItem("marco_upload_module");
     localStorage.removeItem("marco_upload_notes");
 
@@ -600,23 +687,109 @@ function clearUploadForm() {
     }
 }
 
+// ============================================================
+// LOAD SUMMARY CHAPTERS - NEW
+// ============================================================
 
-// --------------------
-// GENERATE AI SUMMARY
-// --------------------
+async function loadSummaryChapters() {
+
+    const chapterSelect = document.getElementById("summaryChapter");
+
+    // Only run this on the Summary page.
+    if (!chapterSelect) {
+        return;
+    }
+
+    const noteId = localStorage.getItem("currentNoteId");
+
+    chapterSelect.innerHTML =
+        '<option value="all">All Chapters</option>';
+
+    if (!noteId) {
+        return;
+    }
+
+    try {
+
+        // Reuse the chapter endpoint from the Quiz Generator.
+        const response = await fetch(
+            `http://127.0.0.1:3000/chapters/${noteId}`
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error(data.message);
+            return;
+        }
+
+        if (!Array.isArray(data.chapters)) {
+            return;
+        }
+
+        // Add detected chapters to the dropdown.
+        data.chapters.forEach(chapter => {
+
+            const option = document.createElement("option");
+
+            option.value = chapter.index;
+            option.textContent = chapter.title;
+
+            chapterSelect.appendChild(option);
+        });
+
+        // Restore the previously selected chapter.
+        const savedChapter = localStorage.getItem(
+            "marco_summary_chapter_" + noteId
+        );
+
+        if (
+            savedChapter !== null &&
+            Array.from(chapterSelect.options).some(
+                option => option.value === savedChapter
+            )
+        ) {
+            chapterSelect.value = savedChapter;
+        }
+
+        // Remember chapter selection when changed.
+        chapterSelect.addEventListener("change", function () {
+
+            localStorage.setItem(
+                "marco_summary_chapter_" + noteId,
+                chapterSelect.value
+            );
+        });
+
+    } catch (error) {
+
+        console.error("Unable to load summary chapters:", error);
+    }
+}
+
+// ============================================================
+// GENERATE AI SUMMARY - CHAPTER SELECTION
+// ============================================================
 
 async function generateSummary(event) {
+
     if (event) {
         event.preventDefault();
     }
 
     const noteId = localStorage.getItem("currentNoteId");
+
+    // Read the selected chapter from the new dropdown.
+    const chapter =
+        document.getElementById("summaryChapter")?.value || "all";
+
     const summaryText = document.getElementById("summaryText");
     const summaryMessage = document.getElementById("summaryMessage");
     const summaryTitle = document.getElementById("summaryTitle");
 
     if (!noteId) {
-        summaryMessage.textContent = "Please upload and save study material first.";
+        summaryMessage.textContent =
+            "Please upload and save study material first.";
         return;
     }
 
@@ -624,13 +797,20 @@ async function generateSummary(event) {
     summaryMessage.textContent = "";
 
     try {
-        const response = await fetch("http://localhost:3000/generate-summary", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ noteId: noteId })
-        });
+
+        const response = await fetch(
+            "http://127.0.0.1:3000/generate-summary",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    noteId: noteId,
+                    chapter: chapter
+                })
+            }
+        );
 
         const data = await response.json();
 
@@ -640,12 +820,37 @@ async function generateSummary(event) {
             return;
         }
 
-        summaryTitle.textContent = data.moduleName + " Summary";
-        summaryText.innerHTML = formatMarkdown(data.summary);
-        summaryMessage.textContent = "Summary generated successfully.";
+        // Include the chapter name when one is selected.
+        if (data.chapter === "all") {
 
-        // Save the visible result so it remains when the user changes pages
-        saveSummaryState(data.moduleName, data.summary);
+            summaryTitle.textContent =
+                data.moduleName + " Summary";
+
+        } else {
+
+            summaryTitle.textContent =
+                data.moduleName + " - " +
+                data.chapterTitle + " Summary";
+        }
+
+        summaryText.innerHTML = formatMarkdown(data.summary);
+
+        summaryMessage.textContent =
+            "Summary generated successfully.";
+
+        // Preserve summary content after refreshing the page.
+        saveSummaryState(
+            data.moduleName +
+            (data.chapter === "all"
+                ? ""
+                : " - " + data.chapterTitle),
+            data.summary
+        );
+
+        localStorage.setItem(
+            "marco_summary_chapter_" + noteId,
+            String(chapter)
+        );
 
         localStorage.setItem("currentResultId", data.resultId);
 
@@ -656,15 +861,73 @@ async function generateSummary(event) {
     }
 }
 
+// ============================================================
+// LOAD QUIZ CHAPTERS
+// ============================================================
 
-// --------------------
-// QUIZ
-// --------------------
+async function loadQuizChapters() {
 
-let currentQuiz = [];
+    const chapterSelect = document.getElementById("quizChapter");
+
+    if (!chapterSelect) {
+        return;
+    }
+
+    const noteId = localStorage.getItem("currentNoteId");
+
+    chapterSelect.innerHTML =
+        '<option value="all">All Chapters</option>';
+
+    if (!noteId) {
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            `http://127.0.0.1:3000/chapters/${noteId}`
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error(data.message);
+            return;
+        }
+
+        if (!Array.isArray(data.chapters)) {
+            return;
+        }
+
+        data.chapters.forEach(chapter => {
+
+            const option = document.createElement("option");
+
+            option.value = chapter.index;
+            option.textContent = chapter.title;
+
+            chapterSelect.appendChild(option);
+        });
+
+    } catch (error) {
+        console.error("Unable to load chapters:", error);
+    }
+}
+
+// ============================================================
+// GENERATE AI QUIZ
+// ============================================================
 
 async function generateQuiz() {
+
     const noteId = localStorage.getItem("currentNoteId");
+
+    const chapter =
+        document.getElementById("quizChapter")?.value || "all";
+
+    const quizType =
+        document.getElementById("quizType")?.value || "multiple";
+
     const quizMessage = document.getElementById("quizMessage");
     const quizContainer = document.getElementById("quizContainer");
     const quizResult = document.getElementById("quizResult");
@@ -672,7 +935,8 @@ async function generateQuiz() {
     const quizTitle = document.getElementById("quizTitle");
 
     if (!noteId) {
-        quizMessage.textContent = "Please upload and save study material first.";
+        quizMessage.textContent =
+            "Please upload and save study material first.";
         return;
     }
 
@@ -682,13 +946,21 @@ async function generateQuiz() {
     submitButton.style.display = "none";
 
     try {
-        const response = await fetch("http://localhost:3000/generate-quiz", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ noteId: noteId })
-        });
+
+        const response = await fetch(
+            "http://127.0.0.1:3000/generate-quiz",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    noteId: noteId,
+                    chapter: chapter,
+                    quizType: quizType
+                })
+            }
+        );
 
         const data = await response.json();
 
@@ -699,12 +971,17 @@ async function generateQuiz() {
 
         currentQuiz = data.questions;
 
+        currentQuizType = quizType;
+        currentQuizChapter = chapter;
+        quizSubmitted = false;
+
         quizTitle.textContent = data.moduleName + " Quiz";
-        quizMessage.textContent = "Choose one answer for each question.";
+
+        quizMessage.textContent =
+            "Choose one answer for each question.";
 
         displayQuiz();
 
-        // Save generated quiz for this note
         saveQuizState(data.moduleName);
 
         submitButton.style.display = "inline-block";
@@ -715,28 +992,35 @@ async function generateQuiz() {
     }
 }
 
-
-// --------------------
+// ============================================================
 // DISPLAY QUIZ
-// --------------------
+// ============================================================
 
 function displayQuiz() {
+
     const quizContainer = document.getElementById("quizContainer");
+
     quizContainer.innerHTML = "";
 
     currentQuiz.forEach((question, questionIndex) => {
+
         const questionBox = document.createElement("div");
         questionBox.className = "quiz-question";
 
         const questionHeading = document.createElement("h3");
-        questionHeading.textContent = (questionIndex + 1) + ". " + question.question;
+
+        questionHeading.textContent =
+            (questionIndex + 1) + ". " + question.question;
+
         questionBox.appendChild(questionHeading);
 
         question.options.forEach((option, optionIndex) => {
+
             const label = document.createElement("label");
             label.className = "quiz-option";
 
             const radio = document.createElement("input");
+
             radio.type = "radio";
             radio.name = "question-" + questionIndex;
             radio.value = optionIndex;
@@ -752,22 +1036,24 @@ function displayQuiz() {
     });
 }
 
+// ============================================================
+// SUBMIT QUIZ AND SAVE SCORE
+// ============================================================
 
-// --------------------
-// SUBMIT QUIZ
-// --------------------
+async function submitQuiz() {
 
-function submitQuiz() {
-    if (currentQuiz.length === 0) {
+    if (currentQuiz.length === 0 || quizSubmitted) {
         return;
     }
 
     let score = 0;
     let unanswered = 0;
 
-    // First check that every question has an answer
     currentQuiz.forEach((question, questionIndex) => {
-        const selected = document.querySelector(`input[name="question-${questionIndex}"]:checked`);
+
+        const selected = document.querySelector(
+            `input[name="question-${questionIndex}"]:checked`
+        );
 
         if (!selected) {
             unanswered++;
@@ -777,18 +1063,26 @@ function submitQuiz() {
     const quizResult = document.getElementById("quizResult");
 
     if (unanswered > 0) {
-        quizResult.textContent = `Please answer all questions. ${unanswered} question(s) are unanswered.`;
+
+        quizResult.textContent =
+            `Please answer all questions. ${unanswered} question(s) are unanswered.`;
+
         return;
     }
 
-    // Mark each question
     currentQuiz.forEach((question, questionIndex) => {
-        const selected = document.querySelector(`input[name="question-${questionIndex}"]:checked`);
-        const selectedAnswer = Number(selected.value);
-        const questionBox = document.querySelectorAll(".quiz-question")[questionIndex];
 
-        // Remove old feedback if quiz is submitted again
-        const oldFeedback = questionBox.querySelector(".question-feedback");
+        const selected = document.querySelector(
+            `input[name="question-${questionIndex}"]:checked`
+        );
+
+        const selectedAnswer = Number(selected.value);
+
+        const questionBox =
+            document.querySelectorAll(".quiz-question")[questionIndex];
+
+        const oldFeedback =
+            questionBox.querySelector(".question-feedback");
 
         if (oldFeedback) {
             oldFeedback.remove();
@@ -798,29 +1092,35 @@ function submitQuiz() {
         feedback.className = "question-feedback";
 
         if (selectedAnswer === question.correctAnswer) {
+
             score++;
+
             feedback.textContent = "Correct!";
             feedback.classList.add("correct-feedback");
 
         } else {
-            feedback.innerHTML = "Incorrect. Correct answer: <strong>" +
-                question.options[question.correctAnswer] +
-                "</strong>";
 
             feedback.classList.add("incorrect-feedback");
+
+            const correctOption =
+                question.options[question.correctAnswer];
+
+            feedback.textContent =
+                "Incorrect. Correct answer: " + correctOption;
         }
 
         questionBox.appendChild(feedback);
 
-        // Stop answers being changed after submission
-        const radioButtons = questionBox.querySelectorAll('input[type="radio"]');
+        const radioButtons =
+            questionBox.querySelectorAll('input[type="radio"]');
 
         radioButtons.forEach(radio => {
             radio.disabled = true;
         });
     });
 
-    const percentage = Math.round((score / currentQuiz.length) * 100);
+    const percentage =
+        Math.round((score / currentQuiz.length) * 100);
 
     quizResult.innerHTML = `
         <h2>Quiz Result</h2>
@@ -829,26 +1129,83 @@ function submitQuiz() {
             <strong>${score}/${currentQuiz.length}</strong>
             (${percentage}%)
         </p>
+        <p id="quizSaveMessage">Saving your score...</p>
     `;
 
-    // Stop the quiz being submitted twice
+    quizSubmitted = true;
+
     document.getElementById("submitQuizButton").style.display = "none";
+
+    saveQuizState(
+        localStorage.getItem("currentModuleName") || "Study Material"
+    );
+
+    const userId = localStorage.getItem("userId");
+    const noteId = localStorage.getItem("currentNoteId");
+    const saveMessage = document.getElementById("quizSaveMessage");
+
+    if (!userId || !noteId) {
+
+        saveMessage.textContent =
+            "Score calculated, but no user or study material was selected.";
+
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            "http://127.0.0.1:3000/save-quiz-score",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    userId: userId,
+                    noteId: noteId,
+                    quizType: currentQuizType,
+                    chapter: currentQuizChapter,
+                    score: score,
+                    totalQuestions: currentQuiz.length
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || "Unable to save quiz score.");
+        }
+
+        saveMessage.textContent = "Quiz score saved successfully!";
+
+    } catch (error) {
+
+        console.error("Save quiz score error:", error);
+
+        saveMessage.textContent =
+            "Your score was calculated, but it could not be saved.";
+    }
 }
 
-
-// --------------------
+// ============================================================
 // AI TUTOR
-// --------------------
+// ============================================================
 
 async function askTutor() {
+
     const noteId = localStorage.getItem("currentNoteId");
+
     const questionInput = document.getElementById("tutorQuestion");
     const tutorMessage = document.getElementById("tutorMessage");
     const tutorAnswer = document.getElementById("tutorAnswer");
+
     const question = questionInput.value.trim();
 
     if (!noteId) {
-        tutorMessage.textContent = "Please upload and save study material first.";
+        tutorMessage.textContent =
+            "Please upload and save study material first.";
         return;
     }
 
@@ -861,16 +1218,20 @@ async function askTutor() {
     tutorAnswer.textContent = "";
 
     try {
-        const response = await fetch("http://localhost:3000/ask-tutor", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                noteId: noteId,
-                question: question
-            })
-        });
+
+        const response = await fetch(
+            "http://127.0.0.1:3000/ask-tutor",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    noteId: noteId,
+                    question: question
+                })
+            }
+        );
 
         const data = await response.json();
 
@@ -880,9 +1241,10 @@ async function askTutor() {
         }
 
         tutorAnswer.innerHTML = formatMarkdown(data.answer);
-        tutorMessage.textContent = "Answer generated successfully.";
 
-        // Keep the question and answer when moving between pages
+        tutorMessage.textContent =
+            "Answer generated successfully.";
+
         saveTutorState(question, data.answer);
 
     } catch (error) {
@@ -891,17 +1253,16 @@ async function askTutor() {
     }
 }
 
-
-// --------------------
+// ============================================================
 // DASHBOARD
-// --------------------
+// ============================================================
 
 async function loadDashboard() {
+
     const userId = localStorage.getItem("userId");
     const fullName = localStorage.getItem("fullName");
     const materialsContainer = document.getElementById("studyMaterials");
 
-    // Only run this code on the Dashboard
     if (!materialsContainer) {
         return;
     }
@@ -911,36 +1272,44 @@ async function loadDashboard() {
         return;
     }
 
-    // Show student's name
     const welcomeMessage = document.getElementById("welcomeMessage");
 
-    if (fullName) {
+    if (fullName && welcomeMessage) {
         welcomeMessage.textContent = "Welcome Back, " + fullName;
     }
 
     try {
-        const response = await fetch(`http://localhost:3000/notes/${userId}`);
+
+        const response = await fetch(
+            `http://127.0.0.1:3000/notes/${userId}`
+        );
+
         const data = await response.json();
 
         if (!response.ok) {
-            materialsContainer.innerHTML = "<p>Unable to load study materials.</p>";
+            materialsContainer.innerHTML =
+                "<p>Unable to load study materials.</p>";
             return;
         }
 
-        // Dashboard counts
-        document.getElementById("notesCount").textContent = data.notesCount;
-        document.getElementById("summaryCount").textContent = data.summaryCount;
+        document.getElementById("notesCount").textContent =
+            data.notesCount;
 
-        // Clear loading message
+        document.getElementById("summaryCount").textContent =
+            data.summaryCount;
+
         materialsContainer.innerHTML = "";
 
         if (data.notes.length === 0) {
-            materialsContainer.innerHTML = "<p>No study materials uploaded yet.</p>";
+
+            materialsContainer.innerHTML =
+                "<p>No study materials uploaded yet.</p>";
+
             return;
         }
 
-        // Create a card for every saved study material
         data.notes.forEach(note => {
+
             const card = document.createElement("div");
             card.className = "card";
 
@@ -948,10 +1317,12 @@ async function loadDashboard() {
             title.textContent = note.ModuleName;
 
             const date = document.createElement("p");
-            const uploadDate = new Date(note.UploadDate + "Z");
-            date.textContent = "Uploaded: " + uploadDate.toLocaleDateString();
 
-            // Study This button
+            const uploadDate = new Date(note.UploadDate + "Z");
+
+            date.textContent =
+                "Uploaded: " + uploadDate.toLocaleDateString();
+
             const button = document.createElement("button");
             button.type = "button";
             button.textContent = "Study This";
@@ -960,7 +1331,6 @@ async function loadDashboard() {
                 selectStudyMaterial(note.NoteID, note.ModuleName);
             };
 
-            // Delete button
             const deleteButton = document.createElement("button");
             deleteButton.type = "button";
             deleteButton.textContent = "Delete";
@@ -969,7 +1339,6 @@ async function loadDashboard() {
                 deleteStudyMaterial(note.NoteID, note.ModuleName);
             };
 
-            // Add everything to card
             card.appendChild(title);
             card.appendChild(date);
             card.appendChild(button);
@@ -978,36 +1347,565 @@ async function loadDashboard() {
             materialsContainer.appendChild(card);
         });
 
-        // Show currently selected material
-        const currentModule = localStorage.getItem("currentModuleName");
+        const currentModule =
+            localStorage.getItem("currentModuleName");
 
         if (currentModule) {
-            document.getElementById("currentStudyMaterial").textContent = currentModule;
+
+            const currentStudyMaterial =
+                document.getElementById("currentStudyMaterial");
+
+            if (currentStudyMaterial) {
+                currentStudyMaterial.textContent = currentModule;
+            }
         }
 
     } catch (error) {
+
         console.error(error);
-        materialsContainer.innerHTML = "<p>Could not connect to the server.</p>";
+
+        materialsContainer.innerHTML =
+            "<p>Could not connect to the server.</p>";
     }
 }
 
+// ============================================================
+// STUDENT PROGRESS AND READINESS
+// ============================================================
 
-// --------------------
-// LOAD SAVED SUMMARIES
-// --------------------
+async function loadQuizProgress() {
 
-async function loadSavedSummaries() {
-    const container = document.getElementById("savedSummaries");
-    if (!container) return;
+    const historyContainer = document.getElementById("quizHistory");
+
+    if (!historyContainer) {
+        return;
+    }
 
     const userId = localStorage.getItem("userId");
-    if (!userId) return;
+
+    if (!userId) {
+        return;
+    }
+
+    historyContainer.textContent = "Loading quiz history...";
 
     try {
-        const response = await fetch(`http://localhost:3000/summaries/${userId}`);
-        if (!response.ok) throw new Error("Unable to load summaries.");
+
+        const response = await fetch(
+            `http://127.0.0.1:3000/quiz-progress/${userId}`
+        );
 
         const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || "Unable to load quiz progress.");
+        }
+
+        // UPDATE DASHBOARD STATISTICS
+
+        document.getElementById("quizzesCompleted").textContent =
+            data.quizzesCompleted;
+
+        document.getElementById("averageQuizScore").textContent =
+            data.quizzesCompleted > 0
+                ? data.averageQuizScore + "%"
+                : "0%";
+
+        document.getElementById("studyReadiness").textContent =
+            data.studyReadiness;
+
+        document.getElementById("readinessMessage").textContent =
+            data.readinessMessage;
+
+        document.getElementById("quizImprovement").textContent =
+            data.quizImprovement;
+
+        document.getElementById("improvementMessage").textContent =
+            data.improvementMessage;
+
+        // DISPLAY QUIZ HISTORY
+
+        historyContainer.innerHTML = "";
+
+        if (!Array.isArray(data.history) || data.history.length === 0) {
+
+            historyContainer.textContent =
+                "No quizzes completed yet. Complete a quiz to begin tracking your progress.";
+
+            displayStudyRecommendations([]);
+
+            return;
+        }
+
+        // PERSONALIZED STUDY RECOMMENDATIONS
+
+        displayStudyRecommendations(data.history);
+
+        // CREATE QUIZ HISTORY TABLE
+
+        const tableWrapper = document.createElement("div");
+
+        tableWrapper.style.overflowX = "auto";
+
+        const table = document.createElement("table");
+
+        table.style.width = "100%";
+        table.style.borderCollapse = "collapse";
+        table.style.textAlign = "left";
+
+        const thead = document.createElement("thead");
+        const headerRow = document.createElement("tr");
+
+        const headings = [
+            "Module",
+            "Chapter",
+            "Quiz Type",
+            "Score",
+            "Percentage",
+            "Date"
+        ];
+
+        headings.forEach(heading => {
+
+            const th = document.createElement("th");
+
+            th.textContent = heading;
+            th.style.padding = "12px";
+            th.style.borderBottom = "2px solid #ccc";
+
+            headerRow.appendChild(th);
+        });
+
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+
+        data.history.forEach(quiz => {
+
+            const row = document.createElement("tr");
+
+            const moduleCell = document.createElement("td");
+            moduleCell.textContent = quiz.ModuleName;
+
+            const chapterCell = document.createElement("td");
+
+            if (String(quiz.Chapter) === "all") {
+
+                chapterCell.textContent = "All Chapters";
+
+            } else {
+
+                const chapterNumber = Number(quiz.Chapter);
+
+                chapterCell.textContent = Number.isInteger(chapterNumber)
+                    ? "Chapter " + (chapterNumber + 1)
+                    : String(quiz.Chapter);
+            }
+
+            const typeCell = document.createElement("td");
+
+            if (quiz.QuizType === "multiple") {
+
+                typeCell.textContent = "Multiple Choice";
+
+            } else if (quiz.QuizType === "truefalse") {
+
+                typeCell.textContent = "True / False";
+
+            } else {
+
+                typeCell.textContent = "Mixed";
+            }
+
+            const scoreCell = document.createElement("td");
+
+            scoreCell.textContent =
+                quiz.Score + " / " + quiz.TotalQuestions;
+
+            const percentageCell = document.createElement("td");
+
+            percentageCell.textContent = quiz.Percentage + "%";
+
+            const dateCell = document.createElement("td");
+
+            if (quiz.CompletedAt) {
+
+                const completedDate = new Date(
+                    quiz.CompletedAt.replace(" ", "T") + "Z"
+                );
+
+                dateCell.textContent = completedDate.toLocaleString();
+
+            } else {
+
+                dateCell.textContent = "Unknown";
+            }
+
+            const cells = [
+                moduleCell,
+                chapterCell,
+                typeCell,
+                scoreCell,
+                percentageCell,
+                dateCell
+            ];
+
+            cells.forEach(cell => {
+
+                cell.style.padding = "12px";
+                cell.style.borderBottom = "1px solid #ddd";
+
+                row.appendChild(cell);
+            });
+
+            tbody.appendChild(row);
+        });
+
+        table.appendChild(tbody);
+
+        tableWrapper.appendChild(table);
+
+        historyContainer.appendChild(tableWrapper);
+
+    } catch (error) {
+
+        console.error("Quiz progress error:", error);
+
+        historyContainer.textContent =
+            "Unable to load quiz progress. Please check that the server is running.";
+
+        const recommendations =
+            document.getElementById("studyRecommendations");
+
+        if (recommendations) {
+            recommendations.textContent =
+                "Unable to load recommendations at the moment.";
+        }
+    }
+}
+
+// ============================================================
+// PERSONALIZED STUDY RECOMMENDATIONS
+// ============================================================
+
+function displayStudyRecommendations(history) {
+
+    const container =
+        document.getElementById("studyRecommendations");
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = "";
+
+    if (!Array.isArray(history) || history.length === 0) {
+
+        const card = document.createElement("div");
+        card.className = "card";
+
+        const heading = document.createElement("h3");
+        heading.textContent = "No Recommendations Yet";
+
+        const message = document.createElement("p");
+        message.textContent =
+            "Complete a quiz to receive personalized study recommendations.";
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = "Take a Quiz";
+
+        button.onclick = function () {
+            window.location.href = "quiz.html";
+        };
+
+        card.appendChild(heading);
+        card.appendChild(message);
+        card.appendChild(button);
+
+        container.appendChild(card);
+
+        return;
+    }
+
+    // GROUP QUIZZES BY MODULE
+
+    const modules = {};
+
+    history.forEach(quiz => {
+
+        const moduleName = quiz.ModuleName || "Unknown Module";
+        const percentage = Number(quiz.Percentage);
+
+        if (!Number.isFinite(percentage)) {
+            return;
+        }
+
+        if (!modules[moduleName]) {
+
+            modules[moduleName] = {
+                name: moduleName,
+                scores: [],
+                chapters: {}
+            };
+        }
+
+        modules[moduleName].scores.push(percentage);
+
+        const chapter = String(quiz.Chapter);
+
+        if (chapter !== "all") {
+
+            if (!modules[moduleName].chapters[chapter]) {
+                modules[moduleName].chapters[chapter] = [];
+            }
+
+            modules[moduleName].chapters[chapter].push(percentage);
+        }
+    });
+
+    // CALCULATE MODULE AVERAGES
+
+    const moduleResults = Object.values(modules).map(module => {
+
+        const total = module.scores.reduce(
+            (sum, score) => sum + score,
+            0
+        );
+
+        const average = Math.round(
+            total / module.scores.length
+        );
+
+        return {
+            name: module.name,
+            average: average,
+            attempts: module.scores.length,
+            chapters: module.chapters
+        };
+    });
+
+    moduleResults.sort((a, b) => a.average - b.average);
+
+    // CREATE RECOMMENDATION CARDS
+
+    moduleResults.forEach(module => {
+
+        const card = document.createElement("div");
+        card.className = "card";
+
+        const title = document.createElement("h3");
+        title.textContent = module.name;
+
+        const scoreText = document.createElement("p");
+        scoreText.textContent =
+            "Average Quiz Score: " + module.average + "%";
+
+        const attemptsText = document.createElement("p");
+        attemptsText.textContent =
+            "Quizzes Completed: " + module.attempts;
+
+        const status = document.createElement("h4");
+        const recommendation = document.createElement("p");
+
+        if (module.average < 50) {
+
+            status.textContent = "Needs More Practice";
+
+            recommendation.textContent =
+                "Your quiz results suggest that this module needs more attention. " +
+                "Review your study notes, generate a summary, and ask Marco " +
+                "to explain difficult concepts before attempting another quiz.";
+
+        } else if (module.average < 70) {
+
+            status.textContent = "Keep Improving";
+
+            recommendation.textContent =
+                "You have made some progress, but there is still room " +
+                "for improvement. Revise the material and practise with " +
+                "another quiz to strengthen your understanding.";
+
+        } else if (module.average < 85) {
+
+            status.textContent = "Good Progress";
+
+            recommendation.textContent =
+                "You are performing well in this module. Continue revising " +
+                "and use more practice quizzes to improve your confidence.";
+
+        } else {
+
+            status.textContent = "Strong Performance";
+
+            recommendation.textContent =
+                "Excellent quiz performance! Continue reviewing this module " +
+                "occasionally to help maintain your understanding.";
+        }
+
+        card.appendChild(title);
+        card.appendChild(scoreText);
+        card.appendChild(attemptsText);
+        card.appendChild(status);
+        card.appendChild(recommendation);
+
+        // IDENTIFY WEAKER CHAPTERS
+
+        const chapterResults = [];
+
+        Object.keys(module.chapters).forEach(chapter => {
+
+            const scores = module.chapters[chapter];
+
+            const total = scores.reduce(
+                (sum, score) => sum + score,
+                0
+            );
+
+            const average = Math.round(
+                total / scores.length
+            );
+
+            chapterResults.push({
+                chapter: chapter,
+                average: average
+            });
+        });
+
+        chapterResults.sort((a, b) => a.average - b.average);
+
+        const weakChapters = chapterResults.filter(
+            chapter => chapter.average < 70
+        );
+
+        if (weakChapters.length > 0) {
+
+            const chapterHeading = document.createElement("h4");
+            chapterHeading.textContent = "Chapters to Revise";
+
+            card.appendChild(chapterHeading);
+
+            weakChapters.forEach(chapter => {
+
+                const chapterText = document.createElement("p");
+
+                const chapterIndex = Number(chapter.chapter);
+
+                const chapterName = Number.isInteger(chapterIndex)
+                    ? "Chapter " + (chapterIndex + 1)
+                    : chapter.chapter;
+
+                chapterText.textContent =
+                    chapterName +
+                    " - Average Score: " +
+                    chapter.average +
+                    "%";
+
+                card.appendChild(chapterText);
+            });
+        }
+
+        // RECOMMENDED STUDY ACTIONS
+
+        const actionHeading = document.createElement("h4");
+        actionHeading.textContent = "Recommended Study Actions";
+
+        card.appendChild(actionHeading);
+
+        const actions = document.createElement("p");
+
+        if (module.average < 70) {
+
+            actions.textContent =
+                "1. Review your study notes. " +
+                "2. Generate a summary. " +
+                "3. Ask Marco questions. " +
+                "4. Retake a quiz.";
+
+        } else {
+
+            actions.textContent =
+                "1. Continue practising quizzes. " +
+                "2. Review important concepts regularly.";
+        }
+
+        card.appendChild(actions);
+
+        // NAVIGATION BUTTONS
+
+        const summaryButton = document.createElement("button");
+        summaryButton.type = "button";
+        summaryButton.textContent = "Study Summary";
+
+        summaryButton.onclick = function () {
+            window.location.href = "summary.html";
+        };
+
+        const quizButton = document.createElement("button");
+        quizButton.type = "button";
+        quizButton.textContent = "Practice Quiz";
+
+        quizButton.onclick = function () {
+            window.location.href = "quiz.html";
+        };
+
+        const tutorButton = document.createElement("button");
+        tutorButton.type = "button";
+        tutorButton.textContent = "Ask Marco";
+
+        tutorButton.onclick = function () {
+            window.location.href = "tutor.html";
+        };
+
+        card.appendChild(summaryButton);
+        card.appendChild(quizButton);
+        card.appendChild(tutorButton);
+
+        container.appendChild(card);
+    });
+
+    if (moduleResults.length === 0) {
+
+        const message = document.createElement("p");
+
+        message.textContent =
+            "No valid quiz results are available for recommendations.";
+
+        container.appendChild(message);
+    }
+}
+
+// ============================================================
+// LOAD SAVED SUMMARIES
+// ============================================================
+
+async function loadSavedSummaries() {
+
+    const container = document.getElementById("savedSummaries");
+
+    if (!container) {
+        return;
+    }
+
+    const userId = localStorage.getItem("userId");
+
+    if (!userId) {
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            `http://127.0.0.1:3000/summaries/${userId}`
+        );
+
+        if (!response.ok) {
+            throw new Error("Unable to load summaries.");
+        }
+
+        const data = await response.json();
+
         container.innerHTML = "";
 
         if (data.summaries.length === 0) {
@@ -1016,6 +1914,7 @@ async function loadSavedSummaries() {
         }
 
         data.summaries.forEach(summary => {
+
             const card = document.createElement("div");
             card.className = "card";
 
@@ -1023,12 +1922,15 @@ async function loadSavedSummaries() {
             title.textContent = summary.ModuleName;
 
             const date = document.createElement("p");
-            date.textContent = "Generated: " +
+
+            date.textContent =
+                "Generated: " +
                 new Date(summary.CreatedAt + "Z").toLocaleDateString();
 
             const button = document.createElement("button");
             button.type = "button";
             button.textContent = "View Summary";
+
             button.onclick = function () {
                 viewSavedSummary(summary);
             };
@@ -1036,56 +1938,60 @@ async function loadSavedSummaries() {
             card.appendChild(title);
             card.appendChild(date);
             card.appendChild(button);
+
             container.appendChild(card);
         });
 
     } catch (error) {
+
         console.error(error);
-        container.textContent = "Unable to load saved summaries.";
+
+        container.textContent =
+            "Unable to load saved summaries.";
     }
 }
 
-
-// --------------------
+// ============================================================
 // VIEW SAVED SUMMARY
-// --------------------
+// ============================================================
 
 function viewSavedSummary(summary) {
+
     const viewer = document.getElementById("savedSummaryViewer");
 
     document.getElementById("savedSummaryTitle").textContent =
         summary.ModuleName + " Summary";
 
     document.getElementById("savedSummaryDate").textContent =
-        "Generated: " + new Date(summary.CreatedAt + "Z").toLocaleString();
+        "Generated: " +
+        new Date(summary.CreatedAt + "Z").toLocaleString();
 
     document.getElementById("savedSummaryContent").innerHTML =
         formatMarkdown(summary.Summary);
 
     viewer.style.display = "block";
-    viewer.scrollIntoView({ behavior: "smooth" });
+
+    viewer.scrollIntoView({
+        behavior: "smooth"
+    });
 }
 
-
-// --------------------
-// CLOSE SAVED SUMMARY
-// --------------------
-
 function closeSavedSummary() {
+
     document.getElementById("savedSummaryViewer").style.display = "none";
 }
 
-
-
-// --------------------
+// ============================================================
 // SELECT STUDY MATERIAL
-// --------------------
+// ============================================================
 
 function selectStudyMaterial(noteId, moduleName) {
+
     localStorage.setItem("currentNoteId", noteId);
     localStorage.setItem("currentModuleName", moduleName);
 
-    const currentStudyMaterial = document.getElementById("currentStudyMaterial");
+    const currentStudyMaterial =
+        document.getElementById("currentStudyMaterial");
 
     if (currentStudyMaterial) {
         currentStudyMaterial.textContent = moduleName;
@@ -1094,23 +2000,28 @@ function selectStudyMaterial(noteId, moduleName) {
     alert(moduleName + " is now your selected study material.");
 }
 
-
-// --------------------
+// ============================================================
 // DELETE STUDY MATERIAL
-// --------------------
+// ============================================================
 
 async function deleteStudyMaterial(noteId, moduleName) {
-    // Ask before deleting
-    const confirmed = confirm("Are you sure you want to delete " + moduleName + "?");
+
+    const confirmed = confirm(
+        "Are you sure you want to delete " + moduleName + "?"
+    );
 
     if (!confirmed) {
         return;
     }
 
     try {
-        const response = await fetch(`http://localhost:3000/notes/${noteId}`, {
-            method: "DELETE"
-        });
+
+        const response = await fetch(
+            `http://127.0.0.1:3000/notes/${noteId}`,
+            {
+                method: "DELETE"
+            }
+        );
 
         const data = await response.json();
 
@@ -1119,21 +2030,22 @@ async function deleteStudyMaterial(noteId, moduleName) {
             return;
         }
 
-        // Remove locally stored AI content belonging to this study material
         localStorage.removeItem("marco_summary_" + noteId);
+        localStorage.removeItem("marco_summary_chapter_" + noteId);
         localStorage.removeItem("marco_quiz_" + noteId);
         localStorage.removeItem("marco_tutor_" + noteId);
 
-        // Check whether the deleted note is currently selected
-        const currentNoteId = localStorage.getItem("currentNoteId");
+        const currentNoteId =
+            localStorage.getItem("currentNoteId");
 
-        // If it was selected, clear the selection
         if (String(currentNoteId) === String(noteId)) {
+
             localStorage.removeItem("currentNoteId");
             localStorage.removeItem("currentModuleName");
             localStorage.removeItem("currentResultId");
 
-            const currentStudyMaterial = document.getElementById("currentStudyMaterial");
+            const currentStudyMaterial =
+                document.getElementById("currentStudyMaterial");
 
             if (currentStudyMaterial) {
                 currentStudyMaterial.textContent = "None selected";
@@ -1142,42 +2054,37 @@ async function deleteStudyMaterial(noteId, moduleName) {
 
         alert("Study material deleted successfully!");
 
-        // Reload dashboard
         loadDashboard();
+        loadSavedSummaries();
+        loadQuizProgress();
 
     } catch (error) {
+
         console.error(error);
+
         alert("Could not connect to the server.");
     }
 }
 
-
-// --------------------
+// ============================================================
 // LOGOUT
-// --------------------
+// ============================================================
 
 function logoutUser() {
+
     localStorage.removeItem("userId");
     localStorage.removeItem("fullName");
     localStorage.removeItem("currentNoteId");
     localStorage.removeItem("currentResultId");
     localStorage.removeItem("currentModuleName");
 
-    // Remove unfinished upload draft
     localStorage.removeItem("marco_upload_module");
     localStorage.removeItem("marco_upload_notes");
-
-    /*
-        Generated summaries, quizzes and tutor answers are intentionally
-        stored per study material.
-
-        We remove all Marco temporary content on logout so another user
-        using the browser cannot see the previous user's generated content.
-    */
 
     const keysToRemove = [];
 
     for (let i = 0; i < localStorage.length; i++) {
+
         const key = localStorage.key(i);
 
         if (
@@ -1199,12 +2106,12 @@ function logoutUser() {
     window.location.href = "index.html";
 }
 
-
-// --------------------
+// ============================================================
 // THEME
-// --------------------
+// ============================================================
 
 function toggleTheme() {
+
     document.body.classList.toggle("dark-mode");
 
     if (document.body.classList.contains("dark-mode")) {
@@ -1214,17 +2121,16 @@ function toggleTheme() {
     }
 }
 
-
-
-// --------------------
+// ============================================================
 // PAGE LOAD
-// --------------------
+// ============================================================
 
 window.onload = function () {
 
-    // Open registration when clicking Get Started on the landing page
     if (window.location.search.includes("register=true")) {
-        const registerSection = document.getElementById("registerSection");
+
+        const registerSection =
+            document.getElementById("registerSection");
 
         if (registerSection) {
             showRegister();
@@ -1237,19 +2143,612 @@ window.onload = function () {
         document.body.classList.add("dark-mode");
     }
 
-    // Load Dashboard information if this is dashboard.html
+    // Dashboard.
     loadDashboard();
     loadSavedSummaries();
+    loadQuizProgress();
 
-    // Restore Summary if this is summary.html
+    // Summary.
+    loadSummaryChapters();
     loadSummaryState();
 
-    // Restore Quiz if this is quiz.html
+    // Quiz.
     loadQuizState();
+    loadQuizChapters();
 
-    // Restore Tutor answer if this is tutor.html
+    // AI Tutor.
     loadTutorState();
 
-    // Restore unfinished Upload form if this is upload.html
+    // Upload form.
     loadUploadDraft();
 };
+
+// ============================================================
+// ADMIN AUTHENTICATION AND SESSION SUPPORT
+// ============================================================
+
+// Include the login session cookie in all requests to Marco.
+const originalFetch = window.fetch.bind(window);
+
+window.fetch = function (url, options = {}) {
+
+    if (String(url).startsWith("http://127.0.0.1:3000/")) {
+
+        return originalFetch(url, {
+            ...options,
+            credentials: "include"
+        });
+    }
+
+    return originalFetch(url, options);
+};
+
+
+// ============================================================
+// UPDATED LOGIN - STUDENT / ADMIN
+// ============================================================
+
+loginUser = async function () {
+
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value;
+    const message = document.getElementById("message");
+
+    if (!email || !password) {
+        message.textContent = "Please enter your email and password.";
+        return;
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailPattern.test(email)) {
+        message.textContent = "Please enter a valid email address.";
+        return;
+    }
+
+    try {
+
+        const response = await fetch("http://127.0.0.1:3000/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                email: email,
+                password: password
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            message.textContent = data.message;
+            return;
+        }
+
+        localStorage.setItem("userId", data.userId);
+        localStorage.setItem("fullName", data.fullName);
+        localStorage.setItem("userRole", data.role);
+
+        if (data.role === "admin") {
+            window.location.href = "admin.html";
+        } else {
+            window.location.href = "dashboard.html";
+        }
+
+    } catch (error) {
+
+        console.error(error);
+        message.textContent = "Could not connect to the server.";
+    }
+};
+
+
+// ============================================================
+// UPDATED LOGOUT
+// ============================================================
+
+const originalLogoutUser = logoutUser;
+
+logoutUser = async function () {
+
+    try {
+
+        await fetch("http://127.0.0.1:3000/logout", {
+            method: "POST"
+        });
+
+    } catch (error) {
+
+        console.error("Logout error:", error);
+    }
+
+    localStorage.removeItem("userRole");
+
+    // Reuse the existing logout cleanup.
+    originalLogoutUser();
+};
+
+
+// ============================================================
+// CHECK CURRENT LOGIN SESSION
+// ============================================================
+
+async function checkLoginSession() {
+
+    const page = window.location.pathname.split("/").pop();
+
+    // Login and registration page does not require a session.
+    if (page === "index.html" || page === "landing.html" || page === "") {
+        return;
+    }
+
+    try {
+
+        const response = await fetch("http://127.0.0.1:3000/auth/me");
+
+        if (!response.ok) {
+
+            localStorage.removeItem("userId");
+            localStorage.removeItem("fullName");
+            localStorage.removeItem("userRole");
+
+            window.location.href = "index.html";
+            return;
+        }
+
+        const user = await response.json();
+
+        localStorage.setItem("userId", user.userId);
+        localStorage.setItem("fullName", user.fullName);
+        localStorage.setItem("userRole", user.role);
+
+        if (user.role === "admin" && page !== "admin.html") {
+
+            window.location.href = "admin.html";
+            return;
+        }
+
+        if (user.role === "student" && page === "admin.html") {
+
+            window.location.href = "dashboard.html";
+        }
+
+    } catch (error) {
+
+        console.error("Session check error:", error);
+    }
+}
+
+
+// ============================================================
+// ADMIN API REQUESTS
+// ============================================================
+
+async function adminFetch(endpoint, options = {}) {
+
+    const response = await fetch(
+        "http://127.0.0.1:3000" + endpoint,
+        options
+    );
+
+    if (!response.ok) {
+
+        const data = await response.json().catch(() => ({}));
+
+        throw new Error(
+            data.message || "Admin request failed."
+        );
+    }
+
+    return response.json();
+}
+
+
+// ============================================================
+// PAGE SESSION CHECK
+// ============================================================
+
+checkLoginSession();
+
+// ============================================================
+// ADMIN DASHBOARD
+// ============================================================
+
+async function loadAdminDashboard() {
+
+    // Only run this function on the admin page.
+    const adminMessage = document.getElementById("adminMessage");
+
+    if (!adminMessage) {
+        return;
+    }
+
+    adminMessage.textContent = "Loading administrator dashboard...";
+
+    try {
+
+        // Retrieve system statistics, users and quiz activity.
+        const [stats, usersData, activityData] = await Promise.all([
+            adminFetch("/admin/stats"),
+            adminFetch("/admin/users"),
+            adminFetch("/admin/activity")
+        ]);
+
+        // ====================================================
+        // SYSTEM STATISTICS
+        // ====================================================
+
+        document.getElementById("adminTotalUsers").textContent =
+            stats.totalUsers;
+
+        document.getElementById("adminTotalStudents").textContent =
+            stats.totalStudents;
+
+        document.getElementById("adminTotalAdmins").textContent =
+            stats.totalAdmins;
+
+        document.getElementById("adminTotalNotes").textContent =
+            stats.totalNotes;
+
+        document.getElementById("adminTotalSummaries").textContent =
+            stats.totalSummaries;
+
+        document.getElementById("adminTotalQuizzes").textContent =
+            stats.totalQuizzes;
+
+        document.getElementById("adminAverageQuizScore").textContent =
+            stats.averageQuizScore + "%";
+
+        document.getElementById("adminTutorQuestions").textContent =
+            stats.totalTutorQuestions;
+
+        // ====================================================
+        // STUDENT MANAGEMENT
+        // ====================================================
+
+        const usersBody = document.getElementById("adminUsersBody");
+
+        usersBody.innerHTML = "";
+
+        const users = usersData.users || [];
+
+        if (users.length === 0) {
+
+            const row = document.createElement("tr");
+            const cell = document.createElement("td");
+
+            cell.colSpan = 6;
+            cell.textContent = "No users found.";
+
+            row.appendChild(cell);
+            usersBody.appendChild(row);
+
+        } else {
+
+            users.forEach(user => {
+
+                const row = document.createElement("tr");
+
+                const values = [
+                    user.FullName,
+                    user.Email,
+                    user.Role,
+                    user.NotesCount,
+                    user.QuizzesCompleted
+                ];
+
+                values.forEach(value => {
+
+                    const cell = document.createElement("td");
+
+                    cell.textContent = value ?? "0";
+                    cell.style.padding = "12px";
+                    cell.style.borderBottom = "1px solid #ddd";
+
+                    row.appendChild(cell);
+                });
+
+                const actionCell = document.createElement("td");
+                actionCell.style.padding = "12px";
+
+                if (user.Role === "student") {
+
+                    const viewButton = document.createElement("button");
+
+                    viewButton.type = "button";
+                    viewButton.textContent = "View Details";
+
+                    viewButton.onclick = function () {
+                        viewAdminStudentDetails(user.UserID);
+                    };
+
+                    actionCell.appendChild(viewButton);
+
+                    const deleteButton = document.createElement("button");
+
+                    deleteButton.type = "button";
+                    deleteButton.textContent = "Delete Student";
+
+                    deleteButton.onclick = function () {
+                        deleteAdminStudent(user.UserID, user.FullName);
+                    };
+
+                    actionCell.appendChild(deleteButton);
+
+                } else {
+
+                    actionCell.textContent = "Administrator";
+                }
+
+                row.appendChild(actionCell);
+                usersBody.appendChild(row);
+            });
+        }
+
+        // ====================================================
+        // RECENT QUIZ ACTIVITY
+        // ====================================================
+
+        const activityBody = document.getElementById("adminActivityBody");
+
+        activityBody.innerHTML = "";
+
+        const activity = activityData.activity || [];
+
+        if (activity.length === 0) {
+
+            const row = document.createElement("tr");
+            const cell = document.createElement("td");
+
+            cell.colSpan = 5;
+            cell.textContent = "No quiz activity recorded yet.";
+
+            row.appendChild(cell);
+            activityBody.appendChild(row);
+
+        } else {
+
+            activity.forEach(quiz => {
+
+                const row = document.createElement("tr");
+
+                const values = [
+                    quiz.FullName,
+                    quiz.ModuleName,
+                    quiz.Score + " / " + quiz.TotalQuestions,
+                    quiz.Percentage + "%",
+                    quiz.CompletedAt
+                ];
+
+                values.forEach(value => {
+
+                    const cell = document.createElement("td");
+
+                    cell.textContent = value ?? "";
+                    cell.style.padding = "12px";
+                    cell.style.borderBottom = "1px solid #ddd";
+
+                    row.appendChild(cell);
+                });
+
+                activityBody.appendChild(row);
+            });
+        }
+
+        adminMessage.textContent =
+            "Administrator dashboard loaded successfully.";
+
+    } catch (error) {
+
+        console.error("Admin dashboard error:", error);
+
+        adminMessage.textContent =
+            "Unable to load administrator dashboard: " + error.message;
+    }
+}
+
+
+// ============================================================
+// DELETE STUDENT ACCOUNT
+// ============================================================
+
+async function deleteAdminStudent(userId, fullName) {
+
+    const confirmed = confirm(
+        "Are you sure you want to permanently delete " +
+        fullName +
+        " and their study data?"
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+
+        await adminFetch("/admin/users/" + userId, {
+            method: "DELETE"
+        });
+
+        alert("Student account deleted successfully.");
+
+        // Refresh dashboard statistics and student list.
+        loadAdminDashboard();
+
+    } catch (error) {
+
+        console.error("Delete student error:", error);
+
+        alert("Unable to delete student: " + error.message);
+    }
+}
+
+// ============================================================
+// ADMIN - SEARCH STUDENTS
+// ============================================================
+
+function searchAdminStudents() {
+
+    const search = document.getElementById("adminStudentSearch")
+        .value.toLowerCase().trim();
+
+    const rows = document.querySelectorAll("#adminUsersBody tr");
+
+    rows.forEach(row => {
+
+        const cells = row.querySelectorAll("td");
+
+        // Skip loading or empty-state rows.
+        if (cells.length < 2) {
+            return;
+        }
+
+        const name = cells[0].textContent.toLowerCase();
+        const email = cells[1].textContent.toLowerCase();
+
+        row.style.display =
+            name.includes(search) || email.includes(search)
+                ? ""
+                : "none";
+    });
+}
+
+// ============================================================
+// ADMIN - VIEW STUDENT DETAILS
+// ============================================================
+
+async function viewAdminStudentDetails(userId) {
+
+    const modal = document.getElementById("adminStudentModal");
+    const container = document.getElementById("adminStudentDetails");
+
+    modal.hidden = false;
+    container.textContent = "Loading student information...";
+
+    try {
+
+        const data = await adminFetch("/admin/students/" + userId);
+
+        container.innerHTML = "";
+
+        // Helper for safely displaying text.
+        function addText(parent, tag, value) {
+            const element = document.createElement(tag);
+            element.textContent = value;
+            parent.appendChild(element);
+            return element;
+        }
+
+        // STUDENT INFORMATION
+        addText(container, "h3", data.student.FullName);
+        addText(container, "p", "Email: " + data.student.Email);
+        addText(container, "p", "Role: " + data.student.Role);
+
+        // STUDENT STATISTICS
+        const stats = document.createElement("div");
+        stats.className = "admin-student-stats";
+
+        [
+            ["Study Materials", data.materialsCount],
+            ["Completed Quizzes", data.quizzesCount],
+            ["Average Quiz Score", data.averageScore + "%"]
+        ].forEach(item => {
+
+            const card = document.createElement("div");
+            card.className = "admin-student-stat";
+
+            addText(card, "h4", item[0]);
+            addText(card, "p", item[1]);
+
+            stats.appendChild(card);
+        });
+
+        container.appendChild(stats);
+
+        // STUDY MATERIALS
+        addText(container, "h3", "Study Materials");
+
+        if (data.materials.length === 0) {
+
+            addText(container, "p", "No study materials uploaded.");
+
+        } else {
+
+            const list = document.createElement("ul");
+
+            data.materials.forEach(material => {
+                addText(list, "li", material.ModuleName);
+            });
+
+            container.appendChild(list);
+        }
+
+        // QUIZ HISTORY
+        addText(container, "h3", "Quiz History");
+
+        if (data.quizzes.length === 0) {
+
+            addText(container, "p", "No completed quizzes yet.");
+
+        } else {
+
+            const scroll = document.createElement("div");
+            scroll.className = "admin-table-scroll";
+
+            const table = document.createElement("table");
+            table.className = "admin-table";
+
+            const thead = document.createElement("thead");
+            const headingRow = document.createElement("tr");
+
+            ["Module", "Quiz Type", "Score", "Percentage", "Date"]
+                .forEach(heading => {
+                    addText(headingRow, "th", heading);
+                });
+
+            thead.appendChild(headingRow);
+            table.appendChild(thead);
+
+            const tbody = document.createElement("tbody");
+
+            data.quizzes.forEach(quiz => {
+
+                const row = document.createElement("tr");
+
+                [
+                    quiz.ModuleName,
+                    quiz.QuizType,
+                    quiz.Score + "/" + quiz.TotalQuestions,
+                    quiz.Percentage + "%",
+                    quiz.CompletedAt
+                ].forEach(value => {
+                    addText(row, "td", value ?? "");
+                });
+
+                tbody.appendChild(row);
+            });
+
+            table.appendChild(tbody);
+            scroll.appendChild(table);
+            container.appendChild(scroll);
+        }
+
+    } catch (error) {
+
+        console.error("Student details error:", error);
+
+        container.textContent =
+            "Unable to load student details: " + error.message;
+    }
+}
+
+
+// ============================================================
+// ADMIN - CLOSE STUDENT DETAILS
+// ============================================================
+
+function closeAdminStudentDetails() {
+
+    document.getElementById("adminStudentModal").hidden = true;
+}

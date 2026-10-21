@@ -1,34 +1,35 @@
+
 const express = require("express");
 const cors = require("cors");
+const session = require("express-session");
 const sqlite3 = require("sqlite3").verbose();
 const bcrypt = require("bcrypt");
 const multer = require("multer");
 const { PDFParse } = require("pdf-parse");
 const { GoogleGenAI } = require("@google/genai");
-const fs = require("fs");
 
 require("dotenv").config();
 
 const app = express();
 const PORT = 3000;
 
+if (!process.env.SESSION_SECRET) {
+    console.error("SESSION_SECRET is missing from .env");
+    process.exit(1);
+}
 
-// --------------------
-// GEMINI
-// --------------------
+// ============================================================
+// GEMINI SETUP
+// ============================================================
 
 const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY
 });
 
-
-// --------------------
-// GEMINI REQUEST HELPER
-// --------------------
-
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function generateWithGemini(prompt) {
+
     const models = [
         "gemini-3.5-flash-lite",
         "gemini-3.6-flash",
@@ -40,88 +41,79 @@ async function generateWithGemini(prompt) {
     for (const model of models) {
         for (let attempt = 1; attempt <= 3; attempt++) {
             try {
-                console.log(`Gemini request: ${model} - attempt ${attempt}`);
+                console.log(`Gemini request: ${model}, attempt ${attempt}`);
 
-                const response = await ai.models.generateContent({
-                    model: model,
+                return await ai.models.generateContent({
+                    model,
                     contents: prompt
                 });
-
-                return response;
 
             } catch (error) {
                 lastError = error;
 
-                const status = error.status || error.statusCode || error.code;
-
-                console.error(
-                    `Gemini ${model} attempt ${attempt} failed:`,
-                    status || error.message
+                const status = Number(
+                    error.status || error.statusCode || error.code
                 );
 
-                const retryable =
-                    status === 429 ||
-                    status === 408 ||
-                    status === 500 ||
-                    status === 502 ||
-                    status === 503 ||
-                    status === 504;
-
-                if (!retryable) {
+                if (![408, 429, 500, 502, 503, 504].includes(status)) {
                     throw error;
                 }
 
                 if (attempt < 3) {
-                    const delay = 1000 * Math.pow(2, attempt - 1);
-                    await sleep(delay);
+                    await sleep(1000 * Math.pow(2, attempt - 1));
                 }
             }
         }
-
-        console.log(`${model} unavailable. Trying fallback model...`);
     }
 
     throw lastError;
 }
 
+// ============================================================
+// MIDDLEWARE
+// ============================================================
 
-// Keep uploaded PDF in memory temporarily
 const upload = multer({
-    storage: multer.memoryStorage()
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-app.use(cors());
+app.use(cors({
+    origin: function (origin, callback) {
+        if (
+            !origin ||
+            origin === "null" ||
+            /^http:\/\/localhost(?::\d+)?$/.test(origin) ||
+            /^http:\/\/127\.0\.0\.1(?::\d+)?$/.test(origin)
+        ) {
+            return callback(null, true);
+        }
 
-app.use(express.json({
-    limit: "10mb"
+        callback(new Error("Origin not allowed."));
+    },
+    credentials: true
 }));
 
+app.use(express.json({ limit: "10mb" }));
 
-/*
-// --------------------
-// DATABASE BACKUP
-// --------------------
-
-// Create a backup of the database whenever the server starts
-fs.copyFile(
-    "study_assistant.db",
-    "backups/study_assistant_backup.db",
-    (err) => {
-        if (err) {
-            console.log("Database backup failed:", err);
-        } else {
-            console.log("Database backup created successfully.");
-        }
+app.use(session({
+    name: "marco.sid",
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: false,
+        maxAge: 24 * 60 * 60 * 1000
     }
-);
-*/
+}));
 
-
-// --------------------
+// ============================================================
 // DATABASE
-// --------------------
+// ============================================================
 
-const db = new sqlite3.Database("./study_assistant.db", (err) => {
+const db = new sqlite3.Database("./study_assistant.db", err => {
     if (err) {
         console.error("Database connection failed:", err.message);
     } else {
@@ -129,311 +121,678 @@ const db = new sqlite3.Database("./study_assistant.db", (err) => {
     }
 });
 
+// Database helper functions.
 
-// --------------------
+function dbGet(sql, params = []) {
+    return new Promise((resolve, reject) => {
+        db.get(sql, params, (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+        });
+    });
+}
+
+function dbAll(sql, params = []) {
+    return new Promise((resolve, reject) => {
+        db.all(sql, params, (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+        });
+    });
+}
+
+function dbRun(sql, params = []) {
+    return new Promise((resolve, reject) => {
+        db.run(sql, params, function (err) {
+            if (err) reject(err);
+            else resolve({
+                lastID: this.lastID,
+                changes: this.changes
+            });
+        });
+    });
+}
+
+function asyncRoute(handler) {
+    return (req, res, next) => {
+        Promise.resolve(handler(req, res, next)).catch(next);
+    };
+}
+
+// ============================================================
+// AUTHENTICATION
+// ============================================================
+
+function requireLogin(req, res, next) {
+
+    if (!req.session.userId) {
+        return res.status(401).json({
+            message: "Please log in first."
+        });
+    }
+
+    next();
+}
+
+function requireAdmin(req, res, next) {
+
+    if (!req.session.userId) {
+        return res.status(401).json({
+            message: "Please log in first."
+        });
+    }
+
+    if (req.session.role !== "admin") {
+        return res.status(403).json({
+            message: "Administrator access required."
+        });
+    }
+
+    next();
+}
+
+function requireStudent(req, res, next) {
+
+    if (!req.session.userId) {
+        return res.status(401).json({
+            message: "Please log in first."
+        });
+    }
+
+    if (req.session.role !== "student") {
+        return res.status(403).json({
+            message: "This feature is for students."
+        });
+    }
+
+    next();
+}
+
+function requireOwnUser(req, res, next) {
+
+    const requestedUserId = Number(req.params.userId);
+
+    if (
+        !Number.isInteger(requestedUserId) ||
+        requestedUserId !== req.session.userId
+    ) {
+        return res.status(403).json({
+            message: "You cannot access another student's information."
+        });
+    }
+
+    next();
+}
+
+async function getOwnedNote(noteId, userId) {
+
+    return await dbGet(
+        `SELECT *
+         FROM Notes
+         WHERE NoteID = ? AND UserID = ?`,
+        [noteId, userId]
+    );
+}
+
+// ============================================================
 // TEST ROUTE
-// --------------------
+// ============================================================
 
 app.get("/", (req, res) => {
     res.send("Marco AI Study Assistant backend is running!");
 });
 
-
-// --------------------
+// ============================================================
 // REGISTER
-// --------------------
+// ============================================================
 
-app.post("/register", async (req, res) => {
+app.post("/register", asyncRoute(async (req, res) => {
+
     const { fullName, email, password } = req.body;
 
-    if (!fullName || !email || !password) {
+    if (
+        typeof fullName !== "string" ||
+        typeof email !== "string" ||
+        typeof password !== "string" ||
+        !fullName.trim() ||
+        !email.trim() ||
+        !password
+    ) {
         return res.status(400).json({
             message: "Please complete all fields."
         });
     }
 
+    if (fullName.trim().length < 2) {
+        return res.status(400).json({
+            message: "Full name must contain at least 2 characters."
+        });
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        return res.status(400).json({
+            message: "Please enter a valid email address."
+        });
+    }
+
+    if (
+        password.length < 8 ||
+        !/[A-Z]/.test(password) ||
+        !/[a-z]/.test(password) ||
+        !/[0-9]/.test(password)
+    ) {
+        return res.status(400).json({
+            message: "Password must contain at least 8 characters, an uppercase letter, a lowercase letter and a number."
+        });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     try {
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const result = await dbRun(
+            `INSERT INTO Users
+             (FullName, Email, Password, Role)
+             VALUES (?, ?, ?, 'student')`,
+            [
+                fullName.trim(),
+                email.trim().toLowerCase(),
+                hashedPassword
+            ]
+        );
 
-        const sql = `
-            INSERT INTO Users
-            (FullName, Email, Password)
-            VALUES (?, ?, ?)
-        `;
-
-        db.run(sql, [fullName, email, hashedPassword], function (err) {
-            if (err) {
-                if (err.message.includes("UNIQUE")) {
-                    return res.status(400).json({
-                        message: "An account with this email already exists."
-                    });
-                }
-
-                console.error("Registration error:", err.message);
-
-                return res.status(500).json({
-                    message: "Unable to create account."
-                });
-            }
-
-            res.status(201).json({
-                message: "Account created successfully!",
-                userId: this.lastID
-            });
+        res.status(201).json({
+            message: "Account created successfully!",
+            userId: result.lastID
         });
 
     } catch (error) {
-        console.error("Registration error:", error);
 
-        res.status(500).json({
-            message: "Unable to create account."
-        });
+        if (error.message.includes("UNIQUE")) {
+            return res.status(400).json({
+                message: "An account with this email already exists."
+            });
+        }
+
+        throw error;
     }
-});
+}));
 
+// ============================================================
+// LOGIN - ADMIN AND STUDENT
+// ============================================================
 
-// --------------------
-// LOGIN
-// --------------------
+app.post("/login", asyncRoute(async (req, res) => {
 
-app.post("/login", (req, res) => {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    if (
+        typeof email !== "string" ||
+        typeof password !== "string" ||
+        !email.trim() ||
+        !password
+    ) {
         return res.status(400).json({
             message: "Please enter your email and password."
         });
     }
 
-    const sql = `
-        SELECT *
-        FROM Users
-        WHERE Email = ?
-    `;
+    const user = await dbGet(
+        `SELECT * FROM Users WHERE LOWER(Email) = ?`,
+        [email.trim().toLowerCase()]
+    );
 
-    db.get(sql, [email], async (err, user) => {
+    if (!user) {
+        return res.status(401).json({
+            message: "Incorrect email or password."
+        });
+    }
+
+    const passwordMatches = await bcrypt.compare(
+        password,
+        user.Password
+    );
+
+    if (!passwordMatches) {
+        return res.status(401).json({
+            message: "Incorrect email or password."
+        });
+    }
+
+    // Regenerate session after successful login.
+    req.session.regenerate(err => {
+
         if (err) {
-            console.error("Login error:", err.message);
-
             return res.status(500).json({
-                message: "Unable to log in."
+                message: "Unable to start login session."
             });
         }
 
-        if (!user) {
-            return res.status(401).json({
-                message: "Incorrect email or password."
-            });
-        }
+        req.session.userId = user.UserID;
+        req.session.role = user.Role || "student";
 
-        try {
-            const passwordMatches = await bcrypt.compare(password, user.Password);
+        req.session.save(saveErr => {
 
-            if (!passwordMatches) {
-                return res.status(401).json({
-                    message: "Incorrect email or password."
+            if (saveErr) {
+                return res.status(500).json({
+                    message: "Unable to save login session."
                 });
             }
 
             res.json({
                 message: "Login successful!",
                 userId: user.UserID,
-                fullName: user.FullName
+                fullName: user.FullName,
+                role: req.session.role
             });
+        });
+    });
+}));
 
-        } catch (error) {
-            console.error("Password check error:", error);
+// ============================================================
+// CHECK CURRENT SESSION
+// ============================================================
 
-            res.status(500).json({
-                message: "Unable to log in."
+app.get("/auth/me", requireLogin, asyncRoute(async (req, res) => {
+
+    const user = await dbGet(
+        `SELECT UserID, FullName, Email, Role
+         FROM Users WHERE UserID = ?`,
+        [req.session.userId]
+    );
+
+    if (!user) {
+        return res.status(401).json({
+            message: "Account no longer exists."
+        });
+    }
+
+    res.json({
+        userId: user.UserID,
+        fullName: user.FullName,
+        email: user.Email,
+        role: user.Role
+    });
+}));
+
+// ============================================================
+// LOGOUT
+// ============================================================
+
+app.post("/logout", requireLogin, (req, res) => {
+
+    req.session.destroy(err => {
+
+        if (err) {
+            return res.status(500).json({
+                message: "Unable to log out."
             });
         }
+
+        res.clearCookie("marco.sid");
+
+        res.json({
+            message: "Logged out successfully."
+        });
     });
 });
 
-
-// --------------------
+// ============================================================
 // SAVE STUDY NOTE
-// --------------------
+// ============================================================
 
-app.post("/notes", (req, res) => {
-    const { userId, moduleName, noteContent } = req.body;
+app.post("/notes", requireStudent, asyncRoute(async (req, res) => {
 
-    if (!userId || !moduleName || !noteContent) {
+    const { moduleName, noteContent } = req.body;
+
+    if (
+        typeof moduleName !== "string" ||
+        typeof noteContent !== "string" ||
+        !moduleName.trim() ||
+        !noteContent.trim()
+    ) {
         return res.status(400).json({
             message: "Please enter a module name and study notes."
         });
     }
 
-    const sql = `
-        INSERT INTO Notes
-        (UserID, ModuleName, NoteContent, UploadDate)
-        VALUES (?, ?, ?, datetime('now'))
-    `;
+    const result = await dbRun(
+        `INSERT INTO Notes
+         (UserID, ModuleName, NoteContent, UploadDate)
+         VALUES (?, ?, ?, datetime('now'))`,
+        [
+            req.session.userId,
+            moduleName.trim(),
+            noteContent
+        ]
+    );
 
-    db.run(sql, [userId, moduleName, noteContent], function (err) {
-        if (err) {
-            console.error("Save note error:", err.message);
-
-            return res.status(500).json({
-                message: "Unable to save study material."
-            });
-        }
-
-        res.status(201).json({
-            message: "Study material saved successfully!",
-            noteId: this.lastID
-        });
+    res.status(201).json({
+        message: "Study material saved successfully!",
+        noteId: result.lastID
     });
-});
+}));
 
-
-// --------------------
+// ============================================================
 // GET USER STUDY MATERIALS
-// --------------------
+// ============================================================
 
-app.get("/notes/:userId", (req, res) => {
-    const userId = req.params.userId;
+app.get(
+    "/notes/:userId",
+    requireStudent,
+    requireOwnUser,
+    asyncRoute(async (req, res) => {
 
-    const notesSql = `
-        SELECT
-            NoteID,
-            ModuleName,
-            UploadDate
-        FROM Notes
-        WHERE UserID = ?
-        ORDER BY UploadDate DESC
-    `;
+        const userId = req.session.userId;
 
-    db.all(notesSql, [userId], (err, notes) => {
-        if (err) {
-            console.error("Retrieve study materials error:", err.message);
+        const notes = await dbAll(
+            `SELECT NoteID, ModuleName, UploadDate
+             FROM Notes
+             WHERE UserID = ?
+             ORDER BY UploadDate DESC`,
+            [userId]
+        );
 
-            return res.status(500).json({
-                message: "Unable to retrieve study materials."
-            });
-        }
+        const summaryCount = await dbGet(
+            `SELECT COUNT(*) AS SummaryCount
+             FROM AIResults ar
+             INNER JOIN Notes n ON ar.NoteID = n.NoteID
+             WHERE n.UserID = ?
+               AND ar.Summary IS NOT NULL`,
+            [userId]
+        );
 
-        const summarySql = `
-            SELECT COUNT(*) AS SummaryCount
-            FROM AIResults ar
-            INNER JOIN Notes n
-                ON ar.NoteID = n.NoteID
-            WHERE n.UserID = ?
-            AND ar.Summary IS NOT NULL
-        `;
-
-        db.get(summarySql, [userId], (summaryErr, result) => {
-            if (summaryErr) {
-                console.error("Retrieve summary count error:", summaryErr.message);
-
-                return res.status(500).json({
-                    message: "Unable to retrieve dashboard information."
-                });
-            }
-
-            res.json({
-                notes: notes,
-                notesCount: notes.length,
-                summaryCount: result.SummaryCount
-            });
+        res.json({
+            notes,
+            notesCount: notes.length,
+            summaryCount: summaryCount.SummaryCount
         });
-    });
-});
+    })
+);
 
+// ============================================================
+// GET SAVED SUMMARIES
+// ============================================================
 
- // --------------------
- // GET SAVED SUMMARIES
- // --------------------
+app.get(
+    "/summaries/:userId",
+    requireStudent,
+    requireOwnUser,
+    asyncRoute(async (req, res) => {
 
-app.get("/summaries/:userId", (req, res) => {
-    const userId = req.params.userId;
+        const summaries = await dbAll(
+            `SELECT
+                ar.ResultID,
+                ar.NoteID,
+                ar.Summary,
+                ar.CreatedAt,
+                n.ModuleName
+             FROM AIResults ar
+             INNER JOIN Notes n ON ar.NoteID = n.NoteID
+             WHERE n.UserID = ?
+               AND ar.Summary IS NOT NULL
+             ORDER BY ar.CreatedAt DESC, ar.ResultID DESC`,
+            [req.session.userId]
+        );
 
-    const sql = `
-        SELECT ar.ResultID, ar.NoteID, ar.Summary, ar.CreatedAt, n.ModuleName
-        FROM AIResults ar
-        INNER JOIN Notes n ON ar.NoteID = n.NoteID
-        WHERE n.UserID = ?
-        AND ar.Summary IS NOT NULL
-        ORDER BY ar.CreatedAt DESC, ar.ResultID DESC
-    `;
+        res.json({ summaries });
+    })
+);
 
-    db.all(sql, [userId], (err, summaries) => {
-        if (err) {
-            console.error("Retrieve summaries error:", err.message);
-            return res.status(500).json({
-                message: "Unable to retrieve saved summaries."
-            });
-        }
-
-        res.json({ summaries: summaries });
-    });
-});
-
-
-
-// --------------------
+// ============================================================
 // DELETE STUDY MATERIAL
-// --------------------
+// ============================================================
 
-app.delete("/notes/:noteId", (req, res) => {
-    const noteId = req.params.noteId;
+app.delete(
+    "/notes/:noteId",
+    requireStudent,
+    asyncRoute(async (req, res) => {
 
-    // First delete AI results connected to this note
-    db.run("DELETE FROM AIResults WHERE NoteID = ?", [noteId], function (err) {
-        if (err) {
-            console.error("Delete AI results error:", err.message);
+        const noteId = req.params.noteId;
 
-            return res.status(500).json({
-                message: "Unable to delete study material."
+        const note = await getOwnedNote(
+            noteId,
+            req.session.userId
+        );
+
+        if (!note) {
+            return res.status(404).json({
+                message: "Study material not found."
             });
         }
 
-        // Then delete the study note itself
-        db.run("DELETE FROM Notes WHERE NoteID = ?", [noteId], function (err) {
-            if (err) {
-                console.error("Delete note error:", err.message);
+        // Delete related records and the note in one transaction.
+        await dbRun("BEGIN TRANSACTION");
 
-                return res.status(500).json({
-                    message: "Unable to delete study material."
-                });
-            }
+        try {
+            await dbRun(
+                "DELETE FROM QuizScores WHERE NoteID = ?",
+                [noteId]
+            );
 
-            res.json({
-                message: "Study material deleted successfully!"
-            });
+            await dbRun(
+                "DELETE FROM AIResults WHERE NoteID = ?",
+                [noteId]
+            );
+
+            await dbRun(
+                "DELETE FROM Notes WHERE NoteID = ? AND UserID = ?",
+                [noteId, req.session.userId]
+            );
+
+            await dbRun("COMMIT");
+
+        } catch (error) {
+            await dbRun("ROLLBACK");
+            throw error;
+        }
+
+        res.json({
+            message: "Study material deleted successfully!"
+        });
+    })
+);
+
+// ============================================================
+// CHAPTER DETECTION HELPER
+// ============================================================
+
+function getStudyChapters(noteContent) {
+
+    const lines = noteContent.split(/\r?\n/);
+
+    const chapterPattern =
+        /^\s*(?:#{1,6}\s*)?(chapter\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)(?:\s*[:.\-–]\s*.*?)?)\s*$/i;
+
+    const numberWords = {
+        one: 1,
+        two: 2,
+        three: 3,
+        four: 4,
+        five: 5,
+        six: 6,
+        seven: 7,
+        eight: 8,
+        nine: 9,
+        ten: 10
+    };
+
+    const matches = [];
+
+    lines.forEach((line, index) => {
+
+        const match = line.match(chapterPattern);
+
+        if (!match) return;
+
+        const title = match[1].trim();
+
+        const numberMatch = title.match(
+            /^chapter\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten)/i
+        );
+
+        if (!numberMatch) return;
+
+        const numberText = numberMatch[1].toLowerCase();
+
+        const chapterNumber = /^\d+$/.test(numberText)
+            ? Number(numberText)
+            : numberWords[numberText];
+
+        matches.push({
+            title,
+            number: chapterNumber,
+            start: index
         });
     });
-});
 
+    const contentsHeadingIndex = lines.findIndex(line =>
+        /^\s*table\s+of\s+contents\s*$/i.test(line)
+    );
 
-// --------------------
-// GENERATE AI SUMMARY
-// --------------------
+    const firstChapterOne = matches.find(
+        chapter => chapter.number === 1
+    );
 
-app.post("/generate-summary", (req, res) => {
-    const { noteId } = req.body;
+    const secondChapterOne = firstChapterOne
+        ? matches.find(chapter =>
+            chapter.number === 1 &&
+            chapter.start > firstChapterOne.start
+        )
+        : null;
 
-    if (!noteId) {
-        return res.status(400).json({
-            message: "No study material was selected."
-        });
+    let contentStart = 0;
+
+    if (secondChapterOne) {
+        contentStart = secondChapterOne.start;
+
+    } else if (contentsHeadingIndex !== -1) {
+
+        const firstChapter = matches.find(
+            chapter => chapter.start > contentsHeadingIndex
+        );
+
+        if (firstChapter) {
+            contentStart = firstChapter.start;
+        }
     }
 
-    const sql = `
-        SELECT *
-        FROM Notes
-        WHERE NoteID = ?
-    `;
+    const actualMatches = matches.filter(
+        chapter => chapter.start >= contentStart
+    );
 
-    db.get(sql, [noteId], async (err, note) => {
-        if (err) {
-            console.error("Retrieve note error:", err.message);
+    const uniqueChapters = new Map();
 
-            return res.status(500).json({
-                message: "Unable to retrieve study material."
+    actualMatches.forEach(chapter => {
+        if (!uniqueChapters.has(chapter.number)) {
+            uniqueChapters.set(chapter.number, chapter);
+        }
+    });
+
+    const chapters = Array.from(uniqueChapters.values())
+        .sort((a, b) => a.start - b.start);
+
+    return chapters.map((chapter, index) => ({
+        index,
+        title: chapter.title,
+        start: chapter.start,
+        end: chapters[index + 1]
+            ? chapters[index + 1].start
+            : lines.length
+    }));
+}
+
+// ============================================================
+// GET CHAPTERS
+// ============================================================
+
+app.get(
+    "/chapters/:noteId",
+    requireStudent,
+    asyncRoute(async (req, res) => {
+
+        const note = await getOwnedNote(
+            req.params.noteId,
+            req.session.userId
+        );
+
+        if (!note) {
+            return res.status(404).json({
+                message: "Study material not found."
             });
         }
+
+        const chapters = getStudyChapters(note.NoteContent);
+
+        res.json({
+            chapters: chapters.map(chapter => ({
+                index: chapter.index,
+                title: chapter.title
+            }))
+        });
+    })
+);
+
+// ============================================================
+// GET CONTENT FOR SELECTED CHAPTER
+// ============================================================
+
+function getSelectedContent(noteContent, chapter) {
+
+    if (chapter === "all") {
+        return {
+            content: noteContent,
+            title: "All Chapters"
+        };
+    }
+
+    const chapters = getStudyChapters(noteContent);
+    const selectedIndex = Number(chapter);
+
+    if (
+        !Number.isInteger(selectedIndex) ||
+        selectedIndex < 0 ||
+        selectedIndex >= chapters.length
+    ) {
+        return null;
+    }
+
+    const selectedChapter = chapters[selectedIndex];
+
+    const content = noteContent
+        .split(/\r?\n/)
+        .slice(selectedChapter.start, selectedChapter.end)
+        .join("\n")
+        .trim();
+
+    if (!content) return null;
+
+    return {
+        content,
+        title: selectedChapter.title
+    };
+}
+
+// ============================================================
+// GENERATE AI SUMMARY - CHAPTER SELECTION
+// ============================================================
+
+app.post(
+    "/generate-summary",
+    requireStudent,
+    asyncRoute(async (req, res) => {
+
+        const { noteId, chapter = "all" } = req.body;
+
+        if (!noteId) {
+            return res.status(400).json({
+                message: "No study material was selected."
+            });
+        }
+
+        const note = await getOwnedNote(
+            noteId,
+            req.session.userId
+        );
 
         if (!note) {
             return res.status(404).json({
@@ -441,8 +800,18 @@ app.post("/generate-summary", (req, res) => {
             });
         }
 
-        try {
-            const prompt = `
+        const selection = getSelectedContent(
+            note.NoteContent,
+            chapter
+        );
+
+        if (!selection) {
+            return res.status(400).json({
+                message: "Invalid or empty chapter selected."
+            });
+        }
+
+        const prompt = `
 You are an AI study assistant for university students.
 
 Create a clear and useful study summary from the notes below.
@@ -452,87 +821,137 @@ Use simple language.
 Organize the summary so that it is easy to revise from.
 Do not add information that is not contained in the student's notes.
 
+IMPORTANT:
+Summarize ONLY the study notes provided below.
+If a specific chapter is selected, do not summarize other chapters.
+
 Module: ${note.ModuleName}
+Selected Chapter: ${selection.title}
 
 Study Notes:
-${note.NoteContent}
-            `;
+${selection.content}
+        `;
 
-            const response = await generateWithGemini(prompt);
-            const summary = response.text;
+        const response = await generateWithGemini(prompt);
+        const summary = response.text;
 
-            if (!summary) {
-                return res.status(500).json({
-                    message: "Gemini did not generate a summary."
-                });
-            }
-
-
-            // --------------------
-            // SAVE SUMMARY
-            // --------------------
-
-            const saveSql = `
-                INSERT INTO AIResults
-                (NoteID, Summary, CreatedAt)
-                VALUES (?, ?, datetime('now'))
-            `;
-
-            db.run(saveSql, [noteId, summary], function (saveErr) {
-                if (saveErr) {
-                    console.error("Save summary error:", saveErr.message);
-
-                    return res.status(500).json({
-                        message: "Summary generated but could not be saved."
-                    });
-                }
-
-                res.json({
-                    message: "Summary generated successfully!",
-                    resultId: this.lastID,
-                    moduleName: note.ModuleName,
-                    summary: summary
-                });
-            });
-
-        } catch (error) {
-            console.error("Gemini error:", error);
-
-            res.status(500).json({
-                message: "Unable to generate AI summary."
+        if (!summary) {
+            return res.status(500).json({
+                message: "Gemini did not generate a summary."
             });
         }
-    });
-});
 
+        const result = await dbRun(
+            `INSERT INTO AIResults
+             (NoteID, Summary, CreatedAt)
+             VALUES (?, ?, datetime('now'))`,
+            [noteId, summary]
+        );
 
-// --------------------
-// GENERATE AI QUIZ
-// --------------------
-
-app.post("/generate-quiz", (req, res) => {
-    const { noteId } = req.body;
-
-    if (!noteId) {
-        return res.status(400).json({
-            message: "No study material was selected."
+        res.json({
+            message: "Summary generated successfully!",
+            resultId: result.lastID,
+            moduleName: note.ModuleName,
+            chapter,
+            chapterTitle: selection.title,
+            summary
         });
+    })
+);
+
+// ============================================================
+// QUIZ VALIDATION HELPER
+// ============================================================
+
+function validateGeneratedQuiz(quiz, quizType) {
+
+    if (
+        !quiz ||
+        !Array.isArray(quiz.questions) ||
+        quiz.questions.length !== 10
+    ) {
+        return false;
     }
 
-    const sql = `
-        SELECT *
-        FROM Notes
-        WHERE NoteID = ?
-    `;
+    let multipleCount = 0;
+    let trueFalseCount = 0;
 
-    db.get(sql, [noteId], async (err, note) => {
-        if (err) {
-            console.error("Retrieve note error:", err.message);
+    for (const question of quiz.questions) {
 
-            return res.status(500).json({
-                message: "Unable to retrieve study material."
+        if (
+            typeof question.question !== "string" ||
+            !question.question.trim() ||
+            !Array.isArray(question.options) ||
+            !Number.isInteger(question.correctAnswer) ||
+            question.correctAnswer < 0 ||
+            question.correctAnswer >= question.options.length
+        ) {
+            return false;
+        }
+
+        if (
+            question.options.some(option =>
+                typeof option !== "string" || !option.trim()
+            )
+        ) {
+            return false;
+        }
+
+        if (question.options.length === 4) {
+            multipleCount++;
+
+        } else if (
+            question.options.length === 2 &&
+            question.options[0] === "True" &&
+            question.options[1] === "False"
+        ) {
+            trueFalseCount++;
+
+        } else {
+            return false;
+        }
+    }
+
+    if (quizType === "multiple") return multipleCount === 10;
+    if (quizType === "truefalse") return trueFalseCount === 10;
+    if (quizType === "mixed") {
+        return multipleCount === 5 && trueFalseCount === 5;
+    }
+
+    return false;
+}
+
+// ============================================================
+// GENERATE AI QUIZ
+// ============================================================
+
+app.post(
+    "/generate-quiz",
+    requireStudent,
+    asyncRoute(async (req, res) => {
+
+        const {
+            noteId,
+            chapter = "all",
+            quizType = "multiple"
+        } = req.body;
+
+        if (!noteId) {
+            return res.status(400).json({
+                message: "No study material was selected."
             });
         }
+
+        if (!["multiple", "truefalse", "mixed"].includes(quizType)) {
+            return res.status(400).json({
+                message: "Invalid quiz type selected."
+            });
+        }
+
+        const note = await getOwnedNote(
+            noteId,
+            req.session.userId
+        );
 
         if (!note) {
             return res.status(404).json({
@@ -540,27 +959,62 @@ app.post("/generate-quiz", (req, res) => {
             });
         }
 
-        try {
-            const prompt = `
+        const selection = getSelectedContent(
+            note.NoteContent,
+            chapter
+        );
+
+        if (!selection) {
+            return res.status(400).json({
+                message: "Invalid or empty chapter selected."
+            });
+        }
+
+        const quizInstructions = {
+            multiple: `
+Create exactly 10 multiple-choice questions.
+Every question MUST have exactly 4 answer options.
+Do not generate True/False questions.
+Each question must have exactly one correct answer.
+`,
+            truefalse: `
+Create exactly 10 True/False questions.
+Every question MUST have exactly these two options:
+["True", "False"]
+Do not generate multiple-choice questions with 4 options.
+Use correctAnswer 0 for True and 1 for False.
+`,
+            mixed: `
+Create exactly 10 questions.
+Exactly 5 questions MUST be multiple-choice with 4 options.
+Exactly 5 questions MUST be True/False with options ["True", "False"].
+Mix the question types throughout the quiz.
+`
+        };
+
+        const prompt = `
 You are an AI study assistant for university students.
 
-Create exactly 10 multiple-choice revision questions using ONLY
+Generate a university-level revision quiz using ONLY
 the study notes provided below.
 
-Each question must:
-- Have exactly 4 answer options.
-- Have only one correct answer.
-- Test information contained in the student's notes.
-- Be clear and suitable for university revision.
-- Not introduce information that is absent from the notes.
+${quizInstructions[quizType]}
 
-Return ONLY valid JSON.
+IMPORTANT FORMAT RULES:
+- Return exactly 10 questions.
+- Follow the selected quiz type exactly.
+- Use only information from the supplied notes.
+- Each question must have one correct answer.
+- Multiple-choice questions must have exactly 4 options.
+- True/False questions must have exactly 2 options:
+  ["True", "False"]
+- correctAnswer must be a NUMBER, not a string.
+- correctAnswer must be the zero-based index of the correct option.
+- Return ONLY valid JSON.
+- Do not include Markdown or code fences.
+- Do not include explanations outside the JSON.
 
-Do not use Markdown.
-Do not use code fences.
-Do not include any explanation before or after the JSON.
-
-Use exactly this structure:
+JSON structure:
 
 {
     "questions": [
@@ -577,150 +1031,286 @@ Use exactly this structure:
     ]
 }
 
-correctAnswer must be the array index of the correct option:
-0 = first option
-1 = second option
-2 = third option
-3 = fourth option
+For True/False questions, use:
+"options": ["True", "False"]
 
 Module: ${note.ModuleName}
 
 Study Notes:
-${note.NoteContent}
-            `;
+${selection.content}
+        `;
 
-            const response = await generateWithGemini(prompt);
+        let quiz = null;
+
+        for (let attempt = 1; attempt <= 3; attempt++) {
+
+            console.log(
+                `Generating ${quizType} quiz - attempt ${attempt}/3`
+            );
+
+            const retryPrompt = attempt === 1
+                ? prompt
+                : `${prompt}
+
+CRITICAL REMINDER:
+Your previous quiz did not match the required format.
+Generate a completely new quiz.
+Selected quiz type: ${quizType}
+${quizInstructions[quizType]}
+There MUST be exactly 10 questions.
+Return ONLY valid JSON.`;
+
+            const response = await generateWithGemini(retryPrompt);
+
             let quizText = response.text;
 
-            if (!quizText) {
-                return res.status(500).json({
-                    message: "Gemini did not generate a quiz."
-                });
-            }
+            if (!quizText) continue;
 
-            // Remove code fences if Gemini adds them
             quizText = quizText
                 .replace(/```json/gi, "")
                 .replace(/```/g, "")
                 .trim();
 
-
-            // --------------------
-            // CONVERT AI RESPONSE TO JSON
-            // --------------------
-
-            let quiz;
-
             try {
-                quiz = JSON.parse(quizText);
+                const generatedQuiz = JSON.parse(quizText);
 
-            } catch (parseError) {
-                console.error("Quiz JSON parse error:", parseError.message);
-                console.error("Gemini quiz response:", quizText);
-
-                return res.status(500).json({
-                    message: "The AI generated an invalid quiz. Please try again."
-                });
-            }
-
-
-            // --------------------
-            // VALIDATE QUIZ
-            // --------------------
-
-            if (!quiz.questions || !Array.isArray(quiz.questions) || quiz.questions.length !== 10) {
-                return res.status(500).json({
-                    message: "The AI did not generate 10 valid questions. Please try again."
-                });
-            }
-
-            for (const question of quiz.questions) {
-                if (
-                    !question.question ||
-                    !Array.isArray(question.options) ||
-                    question.options.length !== 4 ||
-                    !Number.isInteger(question.correctAnswer) ||
-                    question.correctAnswer < 0 ||
-                    question.correctAnswer > 3
-                ) {
-                    return res.status(500).json({
-                        message: "The AI generated an invalid quiz format. Please try again."
-                    });
-                }
-            }
-
-
-            // --------------------
-            // SAVE QUIZ
-            // --------------------
-
-            const saveQuizSql = `
-                INSERT INTO AIResults
-                (NoteID, QuizQuestions, CreatedAt)
-                VALUES (?, ?, datetime('now'))
-            `;
-
-            db.run(saveQuizSql, [noteId, JSON.stringify(quiz.questions)], function (saveErr) {
-                if (saveErr) {
-                    console.error("Save quiz error:", saveErr.message);
-
-                    return res.status(500).json({
-                        message: "Quiz generated but could not be saved."
-                    });
+                if (validateGeneratedQuiz(generatedQuiz, quizType)) {
+                    quiz = generatedQuiz;
+                    break;
                 }
 
-                res.json({
-                    message: "Quiz generated successfully!",
-                    resultId: this.lastID,
-                    moduleName: note.ModuleName,
-                    questions: quiz.questions
-                });
-            });
-
-        } catch (error) {
-            console.error("Gemini quiz error:", error);
-
-            res.status(500).json({
-                message: "Unable to generate AI quiz."
-            });
+            } catch (error) {
+                console.error("Invalid quiz JSON:", error.message);
+            }
         }
-    });
-});
 
-
-// --------------------
-// AI TUTOR
-// --------------------
-
-app.post("/ask-tutor", (req, res) => {
-    const { noteId, question } = req.body;
-
-    if (!noteId) {
-        return res.status(400).json({
-            message: "No study material was selected."
-        });
-    }
-
-    if (!question || !question.trim()) {
-        return res.status(400).json({
-            message: "Please enter a question."
-        });
-    }
-
-    const sql = `
-        SELECT *
-        FROM Notes
-        WHERE NoteID = ?
-    `;
-
-    db.get(sql, [noteId], async (err, note) => {
-        if (err) {
-            console.error("Retrieve note error:", err.message);
-
+        if (!quiz) {
             return res.status(500).json({
-                message: "Unable to retrieve study material."
+                message: "Marco could not generate a valid quiz after several attempts. Please try again."
             });
         }
+
+        const result = await dbRun(
+            `INSERT INTO AIResults
+             (NoteID, QuizQuestions, CreatedAt)
+             VALUES (?, ?, datetime('now'))`,
+            [noteId, JSON.stringify(quiz.questions)]
+        );
+
+        res.json({
+            message: "Quiz generated successfully!",
+            resultId: result.lastID,
+            moduleName: note.ModuleName,
+            quizType,
+            questions: quiz.questions
+        });
+    })
+);
+
+// ============================================================
+// SAVE STUDENT QUIZ SCORE
+// ============================================================
+
+app.post(
+    "/save-quiz-score",
+    requireStudent,
+    asyncRoute(async (req, res) => {
+
+        const {
+            userId,
+            noteId,
+            quizType,
+            chapter,
+            score,
+            totalQuestions
+        } = req.body;
+
+        if (
+            Number(userId) !== req.session.userId ||
+            !Number.isInteger(Number(noteId)) ||
+            Number(noteId) <= 0 ||
+            !["multiple", "truefalse", "mixed"].includes(quizType) ||
+            (typeof chapter !== "string" && typeof chapter !== "number") ||
+            !Number.isInteger(score) ||
+            !Number.isInteger(totalQuestions) ||
+            totalQuestions <= 0 ||
+            score < 0 ||
+            score > totalQuestions
+        ) {
+            return res.status(400).json({
+                message: "Invalid quiz score information."
+            });
+        }
+
+        const note = await getOwnedNote(
+            noteId,
+            req.session.userId
+        );
+
+        if (!note) {
+            return res.status(404).json({
+                message: "Study material not found."
+            });
+        }
+
+        const percentage = Math.round(
+            (score / totalQuestions) * 100
+        );
+
+        const result = await dbRun(
+            `INSERT INTO QuizScores
+             (UserID, NoteID, QuizType, Chapter,
+              Score, TotalQuestions, Percentage)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
+                req.session.userId,
+                noteId,
+                quizType,
+                String(chapter),
+                score,
+                totalQuestions,
+                percentage
+            ]
+        );
+
+        res.status(201).json({
+            message: "Quiz score saved successfully!",
+            scoreId: result.lastID,
+            percentage
+        });
+    })
+);
+
+// ============================================================
+// STUDENT PROGRESS AND READINESS
+// ============================================================
+
+app.get(
+    "/quiz-progress/:userId",
+    requireStudent,
+    requireOwnUser,
+    asyncRoute(async (req, res) => {
+
+        const history = await dbAll(
+            `SELECT
+                qs.ScoreID,
+                qs.NoteID,
+                n.ModuleName,
+                qs.QuizType,
+                qs.Chapter,
+                qs.Score,
+                qs.TotalQuestions,
+                qs.Percentage,
+                qs.CompletedAt
+             FROM QuizScores qs
+             INNER JOIN Notes n ON n.NoteID = qs.NoteID
+             WHERE qs.UserID = ?
+               AND n.UserID = ?
+             ORDER BY qs.CompletedAt DESC, qs.ScoreID DESC`,
+            [req.session.userId, req.session.userId]
+        );
+
+        const quizzesCompleted = history.length;
+
+        const averageQuizScore = quizzesCompleted
+            ? Math.round(
+                history.reduce(
+                    (sum, item) => sum + item.Percentage,
+                    0
+                ) / quizzesCompleted
+            )
+            : 0;
+
+        let studyReadiness = "Not assessed";
+        let readinessMessage =
+            "Complete a quiz to assess your readiness.";
+
+        if (quizzesCompleted > 0) {
+
+            studyReadiness = `${averageQuizScore}%`;
+
+            if (averageQuizScore >= 80) {
+                readinessMessage =
+                    "Strong quiz performance. Keep revising to maintain it.";
+
+            } else if (averageQuizScore >= 60) {
+                readinessMessage =
+                    "Good progress. Review weaker topics to improve.";
+
+            } else {
+                readinessMessage =
+                    "More revision and practice are recommended.";
+            }
+        }
+
+        let quizImprovement = "Not available";
+        let improvementMessage =
+            "Complete more quizzes to track improvement.";
+
+        if (quizzesCompleted >= 2) {
+
+            const difference =
+                history[0].Percentage - history[1].Percentage;
+
+            quizImprovement =
+                `${difference > 0 ? "+" : ""}${difference}%`;
+
+            if (difference > 0) {
+                improvementMessage =
+                    "Your latest quiz score improved compared with the previous quiz.";
+
+            } else if (difference < 0) {
+                improvementMessage =
+                    "Your latest score was lower than the previous quiz.";
+
+            } else {
+                improvementMessage =
+                    "Your last two quiz scores were equal.";
+            }
+        }
+
+        res.json({
+            quizzesCompleted,
+            averageQuizScore,
+            studyReadiness,
+            readinessMessage,
+            quizImprovement,
+            improvementMessage,
+            history
+        });
+    })
+);
+
+// ============================================================
+// AI TUTOR
+// ============================================================
+
+app.post(
+    "/ask-tutor",
+    requireStudent,
+    asyncRoute(async (req, res) => {
+
+        const { noteId, question } = req.body;
+
+        if (!noteId) {
+            return res.status(400).json({
+                message: "No study material was selected."
+            });
+        }
+
+        if (
+            typeof question !== "string" ||
+            !question.trim()
+        ) {
+            return res.status(400).json({
+                message: "Please enter a question."
+            });
+        }
+
+        const note = await getOwnedNote(
+            noteId,
+            req.session.userId
+        );
 
         if (!note) {
             return res.status(404).json({
@@ -728,8 +1318,7 @@ app.post("/ask-tutor", (req, res) => {
             });
         }
 
-        try {
-            const prompt = `
+        const prompt = `
 You are Marco, an AI study tutor for university students.
 
 The student is studying the module "${note.ModuleName}".
@@ -750,106 +1339,385 @@ ${note.NoteContent}
 
 Student Question:
 ${question}
-            `;
+        `;
 
-            const response = await generateWithGemini(prompt);
-            const answer = response.text;
+        const response = await generateWithGemini(prompt);
+        const answer = response.text;
 
-            if (!answer) {
-                return res.status(500).json({
-                    message: "Gemini did not generate an answer."
-                });
-            }
-
-
-            // --------------------
-            // SAVE AI TUTOR ANSWER
-            // --------------------
-
-            const saveAnswerSql = `
-                INSERT INTO AIResults
-                (NoteID, AIAnswer, CreatedAt)
-                VALUES (?, ?, datetime('now'))
-            `;
-
-            db.run(saveAnswerSql, [noteId, answer], function (saveErr) {
-                if (saveErr) {
-                    console.error("Save AI tutor answer error:", saveErr.message);
-
-                    return res.status(500).json({
-                        message: "Answer generated but could not be saved."
-                    });
-                }
-
-                res.json({
-                    message: "Answer generated successfully!",
-                    resultId: this.lastID,
-                    moduleName: note.ModuleName,
-                    answer: answer
-                });
-            });
-
-        } catch (error) {
-            console.error("Gemini tutor error:", error);
-
-            res.status(500).json({
-                message: "Unable to generate AI tutor response."
+        if (!answer) {
+            return res.status(500).json({
+                message: "Gemini did not generate an answer."
             });
         }
-    });
-});
 
+        const result = await dbRun(
+            `INSERT INTO AIResults
+             (NoteID, AIAnswer, CreatedAt)
+             VALUES (?, ?, datetime('now'))`,
+            [noteId, answer]
+        );
 
-// --------------------
-// PDF TEXT EXTRACTION
-// --------------------
-
-app.post("/extract-pdf", upload.single("pdf"), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({
-            message: "Please select a PDF file."
+        res.json({
+            message: "Answer generated successfully!",
+            resultId: result.lastID,
+            moduleName: note.ModuleName,
+            answer
         });
-    }
+    })
+);
 
-    try {
+// ============================================================
+// PDF TEXT EXTRACTION
+// ============================================================
+
+app.post(
+    "/extract-pdf",
+    requireStudent,
+    upload.single("pdf"),
+    asyncRoute(async (req, res) => {
+
+        if (!req.file) {
+            return res.status(400).json({
+                message: "Please select a PDF file."
+            });
+        }
+
         const parser = new PDFParse({
             data: req.file.buffer
         });
 
-        const result = await parser.getText();
-        await parser.destroy();
+        try {
+            const result = await parser.getText();
 
-        if (!result.text || !result.text.trim()) {
+            if (!result.text || !result.text.trim()) {
+                return res.status(400).json({
+                    message: "No readable text was found in this PDF."
+                });
+            }
+
+            res.json({
+                message: "PDF loaded successfully.",
+                text: result.text
+            });
+
+        } finally {
+            await parser.destroy();
+        }
+    })
+);
+
+// ============================================================
+// ADMIN DASHBOARD STATISTICS
+// ============================================================
+
+app.get(
+    "/admin/stats",
+    requireAdmin,
+    asyncRoute(async (req, res) => {
+
+        const users = await dbGet(
+            `SELECT
+                COUNT(*) AS totalUsers,
+                SUM(CASE WHEN Role = 'student' THEN 1 ELSE 0 END) AS totalStudents,
+                SUM(CASE WHEN Role = 'admin' THEN 1 ELSE 0 END) AS totalAdmins
+             FROM Users`
+        );
+
+        const notes = await dbGet(
+            "SELECT COUNT(*) AS totalNotes FROM Notes"
+        );
+
+        const summaries = await dbGet(
+            `SELECT COUNT(*) AS totalSummaries
+             FROM AIResults
+             WHERE Summary IS NOT NULL`
+        );
+
+        const quizzes = await dbGet(
+            `SELECT COUNT(*) AS totalQuizzes
+             FROM QuizScores`
+        );
+
+        const average = await dbGet(
+            `SELECT ROUND(AVG(Percentage)) AS averageQuizScore
+             FROM QuizScores`
+        );
+
+        const tutor = await dbGet(
+            `SELECT COUNT(*) AS totalTutorQuestions
+             FROM AIResults
+             WHERE AIAnswer IS NOT NULL`
+        );
+
+        res.json({
+            totalUsers: users.totalUsers || 0,
+            totalStudents: users.totalStudents || 0,
+            totalAdmins: users.totalAdmins || 0,
+            totalNotes: notes.totalNotes || 0,
+            totalSummaries: summaries.totalSummaries || 0,
+            totalQuizzes: quizzes.totalQuizzes || 0,
+            averageQuizScore: average.averageQuizScore || 0,
+            totalTutorQuestions: tutor.totalTutorQuestions || 0
+        });
+    })
+);
+
+// ============================================================
+// ADMIN - VIEW REGISTERED USERS
+// ============================================================
+
+app.get(
+    "/admin/users",
+    requireAdmin,
+    asyncRoute(async (req, res) => {
+
+        const users = await dbAll(
+            `SELECT
+                u.UserID,
+                u.FullName,
+                u.Email,
+                u.Role,
+                COUNT(DISTINCT n.NoteID) AS NotesCount,
+                COUNT(DISTINCT qs.ScoreID) AS QuizzesCompleted
+             FROM Users u
+             LEFT JOIN Notes n
+                ON n.UserID = u.UserID
+             LEFT JOIN QuizScores qs
+                ON qs.UserID = u.UserID
+             GROUP BY
+                u.UserID,
+                u.FullName,
+                u.Email,
+                u.Role
+             ORDER BY u.UserID DESC`
+        );
+
+        res.json({ users });
+    })
+);
+
+// ============================================================
+// ADMIN - VIEW INDIVIDUAL STUDENT DETAILS
+// ============================================================
+
+app.get(
+    "/admin/students/:userId",
+    requireAdmin,
+    asyncRoute(async (req, res) => {
+
+        const userId = Number(req.params.userId);
+
+        if (!Number.isInteger(userId) || userId <= 0) {
             return res.status(400).json({
-                message: "No readable text was found in this PDF."
+                message: "Invalid student ID."
             });
         }
 
+        // Get the selected student's account information.
+        const student = await dbGet(
+            `SELECT UserID, FullName, Email, Role
+             FROM Users
+             WHERE UserID = ? AND Role = 'student'`,
+            [userId]
+        );
+
+        if (!student) {
+            return res.status(404).json({
+                message: "Student not found."
+            });
+        }
+
+        // Retrieve the student's saved study materials.
+        const materials = await dbAll(
+            `SELECT ModuleName, UploadDate
+             FROM Notes
+             WHERE UserID = ?
+             ORDER BY UploadDate DESC, NoteID DESC`,
+            [userId]
+        );
+
+        // Retrieve all completed quizzes for this student.
+        const quizzes = await dbAll(
+            `SELECT
+                n.ModuleName,
+                qs.QuizType,
+                qs.Score,
+                qs.TotalQuestions,
+                qs.Percentage,
+                qs.CompletedAt
+             FROM QuizScores qs
+             INNER JOIN Notes n ON qs.NoteID = n.NoteID
+             WHERE qs.UserID = ?
+             ORDER BY qs.CompletedAt DESC, qs.ScoreID DESC`,
+            [userId]
+        );
+
+        // Calculate the student's average quiz percentage.
+        const average = await dbGet(
+            `SELECT ROUND(AVG(Percentage)) AS AverageScore
+             FROM QuizScores
+             WHERE UserID = ?`,
+            [userId]
+        );
+
         res.json({
-            message: "PDF loaded successfully.",
-            text: result.text
+            student,
+            materials,
+            quizzes,
+            materialsCount: materials.length,
+            quizzesCount: quizzes.length,
+            averageScore: average.AverageScore ?? 0
         });
+    })
+);
 
-    } catch (error) {
-        console.error("PDF extraction error:", error);
+// ============================================================
+// ADMIN - VIEW STUDENT ACTIVITY
+// ============================================================
 
-        res.status(500).json({
-            message: "Unable to read this PDF."
+app.get(
+    "/admin/activity",
+    requireAdmin,
+    asyncRoute(async (req, res) => {
+
+        const activity = await dbAll(
+            `SELECT
+                qs.ScoreID,
+                u.FullName,
+                n.ModuleName,
+                qs.QuizType,
+                qs.Chapter,
+                qs.Score,
+                qs.TotalQuestions,
+                qs.Percentage,
+                qs.CompletedAt
+             FROM QuizScores qs
+             INNER JOIN Users u
+                ON qs.UserID = u.UserID
+             INNER JOIN Notes n
+                ON qs.NoteID = n.NoteID
+             ORDER BY qs.CompletedAt DESC, qs.ScoreID DESC
+             LIMIT 50`
+        );
+
+        res.json({ activity });
+    })
+);
+
+// ============================================================
+// ADMIN - DELETE STUDENT ACCOUNT
+// ============================================================
+
+app.delete(
+    "/admin/users/:userId",
+    requireAdmin,
+    asyncRoute(async (req, res) => {
+
+        const userId = Number(req.params.userId);
+
+        if (!Number.isInteger(userId) || userId <= 0) {
+            return res.status(400).json({
+                message: "Invalid user ID."
+            });
+        }
+
+        if (userId === req.session.userId) {
+            return res.status(400).json({
+                message: "You cannot delete your own admin account."
+            });
+        }
+
+        const user = await dbGet(
+            "SELECT UserID, Role FROM Users WHERE UserID = ?",
+            [userId]
+        );
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found."
+            });
+        }
+
+        // Protect admin accounts from accidental deletion.
+        if (user.Role === "admin") {
+            return res.status(403).json({
+                message: "Admin accounts cannot be deleted here."
+            });
+        }
+
+        await dbRun("BEGIN TRANSACTION");
+
+        try {
+            await dbRun(
+                "DELETE FROM QuizScores WHERE UserID = ?",
+                [userId]
+            );
+
+            await dbRun(
+                `DELETE FROM AIResults
+                 WHERE NoteID IN (
+                     SELECT NoteID FROM Notes WHERE UserID = ?
+                 )`,
+                [userId]
+            );
+
+            await dbRun(
+                "DELETE FROM Notes WHERE UserID = ?",
+                [userId]
+            );
+
+            await dbRun(
+                "DELETE FROM Users WHERE UserID = ? AND Role = 'student'",
+                [userId]
+            );
+
+            await dbRun("COMMIT");
+
+        } catch (error) {
+            await dbRun("ROLLBACK");
+            throw error;
+        }
+
+        res.json({
+            message: "Student account deleted successfully."
+        });
+    })
+);
+
+// ============================================================
+// ERROR HANDLING
+// ============================================================
+
+app.use((err, req, res, next) => {
+
+    console.error("Server error:", err);
+
+    if (err instanceof multer.MulterError) {
+        return res.status(400).json({
+            message: "PDF upload failed: " + err.message
         });
     }
+
+    res.status(500).json({
+        message: "An unexpected server error occurred."
+    });
 });
 
-
-// --------------------
+// ============================================================
 // START SERVER
-// --------------------
+// ============================================================
 
 app.listen(PORT, () => {
-    console.log(`Marco server running on http://localhost:${PORT}`);
+
+    console.log(
+        `Marco server running on http://localhost:${PORT}`
+    );
 
     if (process.env.GEMINI_API_KEY) {
         console.log("Gemini API key loaded successfully.");
     } else {
         console.log("WARNING: Gemini API key was not found.");
     }
+
+    console.log("Student and admin authentication enabled.");
 });
