@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 
@@ -36,6 +37,7 @@
         <!-- DASHBOARD COUNTS -->
 
         <div class="card-grid">
+
             <div class="card">
                 <h3>Notes Uploaded</h3>
                 <p id="notesCount">0</p>
@@ -50,6 +52,83 @@
                 <h3>Current Study Material</h3>
                 <p id="currentStudyMaterial">None selected</p>
             </div>
+
+        </div>
+
+
+        <!-- STUDENT PROGRESS AND READINESS -->
+
+        <div class="section-header">
+            <h2>Student Progress & Readiness</h2>
+            <p>Track your quiz performance and monitor your preparation.</p>
+        </div>
+
+        <div class="card-grid">
+
+            <div class="card">
+                <h3>Quizzes Completed</h3>
+                <p id="quizzesCompleted">0</p>
+            </div>
+
+            <div class="card">
+                <h3>Average Quiz Score</h3>
+                <p id="averageQuizScore">0%</p>
+            </div>
+
+            <div class="card">
+                <h3>Study Readiness</h3>
+                <p id="studyReadiness">Not assessed</p>
+                <p id="readinessMessage">
+                    Complete a quiz to assess your readiness.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>Recent Improvement</h3>
+                <p id="quizImprovement">Not available</p>
+                <p id="improvementMessage">
+                    Complete more quizzes to track improvement.
+                </p>
+            </div>
+
+        </div>
+
+
+        <!-- QUIZ HISTORY -->
+
+        <div class="section-header">
+            <h2>Quiz History</h2>
+            <p>Review your previous quiz scores and identify areas for improvement.</p>
+        </div>
+
+        <div class="card">
+
+            <div id="quizHistory">
+                <p>No quizzes completed yet.</p>
+            </div>
+
+        </div>
+
+
+        <!-- PERSONALIZED STUDY RECOMMENDATIONS - NEW -->
+
+        <div class="section-header">
+            <h2>Personalized Study Recommendations</h2>
+            <p>
+                Get study suggestions based on your previous quiz results
+                and identify which modules or chapters need more practice.
+            </p>
+        </div>
+
+        <div id="studyRecommendations" class="card-grid">
+
+            <div class="card">
+                <h3>Study Recommendations</h3>
+                <p>
+                    Complete a quiz to receive personalized study recommendations.
+                </p>
+            </div>
+
         </div>
 
 
@@ -77,12 +156,18 @@
         </div>
 
         <div id="savedSummaryViewer" class="card" style="display: none; margin-top: 20px;">
-            <h2 id="savedSummaryTitle">Summary</h2>
-            <p id="savedSummaryDate"></p>
-            <div id="savedSummaryContent"></div>
-            <button type="button" onclick="closeSavedSummary()">Close Summary</button>
-        </div>
 
+            <h2 id="savedSummaryTitle">Summary</h2>
+
+            <p id="savedSummaryDate"></p>
+
+            <div id="savedSummaryContent"></div>
+
+            <button type="button" onclick="closeSavedSummary()">
+                Close Summary
+            </button>
+
+        </div>
 
 
         <!-- STUDY TOOLS -->
@@ -97,25 +182,33 @@
             <div class="card">
                 <h3>Upload Notes</h3>
                 <p>Upload study material for AI processing.</p>
-                <button type="button" onclick="location.href='upload.html'">Upload</button>
+                <button type="button" onclick="location.href='upload.html'">
+                    Upload
+                </button>
             </div>
 
             <div class="card">
                 <h3>Generate Summary</h3>
                 <p>Create concise summaries from your selected notes.</p>
-                <button type="button" onclick="location.href='summary.html'">Summarize</button>
+                <button type="button" onclick="location.href='summary.html'">
+                    Summarize
+                </button>
             </div>
 
             <div class="card">
                 <h3>Quiz Generator</h3>
                 <p>Generate revision questions from your selected notes.</p>
-                <button type="button" onclick="location.href='quiz.html'">Create Quiz</button>
+                <button type="button" onclick="location.href='quiz.html'">
+                    Create Quiz
+                </button>
             </div>
 
             <div class="card">
                 <h3>AI Tutor</h3>
                 <p>Ask Marco questions about your selected notes.</p>
-                <button type="button" onclick="location.href='tutor.html'">Ask Marco</button>
+                <button type="button" onclick="location.href='tutor.html'">
+                    Ask Marco
+                </button>
             </div>
 
         </div>

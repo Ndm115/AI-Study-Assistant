@@ -1,8 +1,11 @@
+
 CREATE TABLE Users (
     UserID INTEGER PRIMARY KEY AUTOINCREMENT,
     FullName TEXT NOT NULL,
     Email TEXT NOT NULL UNIQUE,
-    Password TEXT NOT NULL
+    Password TEXT NOT NULL,
+    Role TEXT NOT NULL DEFAULT 'student'
+        CHECK (Role IN ('student', 'admin'))
 );
 
 CREATE TABLE Notes (
@@ -21,5 +24,19 @@ CREATE TABLE AIResults (
     QuizQuestions TEXT,
     AIAnswer TEXT,
     CreatedAt TEXT NOT NULL,
+    FOREIGN KEY (NoteID) REFERENCES Notes(NoteID)
+);
+
+CREATE TABLE IF NOT EXISTS QuizScores (
+    ScoreID INTEGER PRIMARY KEY AUTOINCREMENT,
+    UserID INTEGER NOT NULL,
+    NoteID INTEGER NOT NULL,
+    QuizType TEXT NOT NULL,
+    Chapter TEXT NOT NULL,
+    Score INTEGER NOT NULL,
+    TotalQuestions INTEGER NOT NULL,
+    Percentage INTEGER NOT NULL,
+    CompletedAt TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (UserID) REFERENCES Users(UserID),
     FOREIGN KEY (NoteID) REFERENCES Notes(NoteID)
 );

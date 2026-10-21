@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -32,18 +33,50 @@
     </div>
 
     <div class="result-box">
+
         <h3 id="quizTitle">Quiz Questions</h3>
 
         <p id="quizMessage">Generate a quiz from your saved study material.</p>
+
+        <!-- QUIZ SETTINGS -->
+        <div class="quiz-settings">
+
+            <h3>Quiz Settings</h3>
+
+            <!-- CHAPTER SELECTION -->
+            <label for="quizChapter">Select Chapter</label>
+
+            <select id="quizChapter">
+                <option value="all">All Chapters</option>
+            </select>
+
+            <p>Select a specific chapter or generate questions from all chapters.</p>
+
+            <!-- QUIZ TYPE SELECTION -->
+            <label for="quizType">Select Quiz Type</label>
+
+            <select id="quizType">
+                <option value="multiple">Multiple Choice</option>
+                <option value="truefalse">True / False</option>
+                <option value="mixed">Mixed Quiz</option>
+            </select>
+
+            <p>Choose between multiple-choice questions, true/false questions, or a mixture of both.</p>
+
+        </div>
 
         <button type="button" onclick="generateQuiz()">Generate Quiz</button>
         <button type="button" onclick="clearQuiz()">Clear Quiz</button>
 
         <div id="quizContainer"></div>
 
-        <button type="button" id="submitQuizButton" onclick="submitQuiz()" style="display: none;">Submit Quiz</button>
+        <button type="button" id="submitQuizButton"
+                onclick="submitQuiz()" style="display: none;">
+            Submit Quiz
+        </button>
 
         <div id="quizResult"></div>
+
     </div>
 
     <div class="section-header">
