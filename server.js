@@ -1,4 +1,6 @@
 
+require("dotenv").config();
+
 const express = require("express");
 const path = require("path");
 const cors = require("cors");
@@ -8,11 +10,15 @@ const bcrypt = require("bcrypt");
 const multer = require("multer");
 const { PDFParse } = require("pdf-parse");
 const { GoogleGenAI } = require("@google/genai");
-
-require("dotenv").config();
+const os = require("os");
+const fs = require("fs");
 
 const app = express();
 const PORT = 3000;
+
+// ============================================================
+// ENVIRONMENT VARIABLES
+// ============================================================
 
 if (!process.env.SESSION_SECRET) {
     console.error("SESSION_SECRET is missing from .env");
@@ -27,10 +33,10 @@ const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY
 });
 
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = ms =>
+    new Promise(resolve => setTimeout(resolve, ms));
 
 async function generateWithGemini(prompt) {
-
     const models = [
         "gemini-3.5-flash-lite",
         "gemini-3.6-flash",
@@ -42,7 +48,9 @@ async function generateWithGemini(prompt) {
     for (const model of models) {
         for (let attempt = 1; attempt <= 3; attempt++) {
             try {
-                console.log(`Gemini request: ${model}, attempt ${attempt}`);
+                console.log(
+                    `Gemini request: ${model}, attempt ${attempt}`
+                );
 
                 return await ai.models.generateContent({
                     model,
@@ -61,7 +69,9 @@ async function generateWithGemini(prompt) {
                 }
 
                 if (attempt < 3) {
-                    await sleep(1000 * Math.pow(2, attempt - 1));
+                    await sleep(
+                        1000 * Math.pow(2, attempt - 1)
+                    );
                 }
             }
         }
@@ -76,7 +86,9 @@ async function generateWithGemini(prompt) {
 
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 10 * 1024 * 1024 }
+    limits: {
+        fileSize: 10 * 1024 * 1024
+    }
 });
 
 app.use(cors({
@@ -95,7 +107,9 @@ app.use(cors({
     credentials: true
 }));
 
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({
+    limit: "10mb"
+}));
 
 app.use(session({
     name: "marco.sid",
@@ -114,8 +128,7 @@ app.use(session({
 // SERVE MARCO FRONTEND
 // ============================================================
 
-// Serve HTML, CSS, JavaScript and other frontend files.
-const path = require("path");
+// Only serve the frontend files, not the database or .env.
 
 const frontendFiles = [
     "index.html",
@@ -137,11 +150,8 @@ frontendFiles.forEach(file => {
     });
 });
 
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "index.html"));
-});
+// Open the login page at localhost:3000.
 
-// Open the login page when visiting localhost:3000.
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "index.html"));
 });
@@ -150,15 +160,25 @@ app.get("/", (req, res) => {
 // DATABASE
 // ============================================================
 
-const db = new sqlite3.Database("./study_assistant.db", err => {
-    if (err) {
-        console.error("Database connection failed:", err.message);
-    } else {
-        console.log("Connected to Marco SQLite database.");
+const db = new sqlite3.Database(
+    "./study_assistant.db",
+    err => {
+        if (err) {
+            console.error(
+                "Database connection failed:",
+                err.message
+            );
+        } else {
+            console.log(
+                "Connected to Marco SQLite database."
+            );
+        }
     }
-});
+);
 
-// Database helper functions.
+// ============================================================
+// DATABASE HELPER FUNCTIONS
+// ============================================================
 
 function dbGet(sql, params = []) {
     return new Promise((resolve, reject) => {
@@ -181,27 +201,31 @@ function dbAll(sql, params = []) {
 function dbRun(sql, params = []) {
     return new Promise((resolve, reject) => {
         db.run(sql, params, function (err) {
-            if (err) reject(err);
-            else resolve({
-                lastID: this.lastID,
-                changes: this.changes
-            });
+            if (err) {
+                reject(err);
+            } else {
+                resolve({
+                    lastID: this.lastID,
+                    changes: this.changes
+                });
+            }
         });
     });
 }
 
 function asyncRoute(handler) {
     return (req, res, next) => {
-        Promise.resolve(handler(req, res, next)).catch(next);
+        Promise.resolve(
+            handler(req, res, next)
+        ).catch(next);
     };
 }
 
 // ============================================================
-// AUTHENTICATION
+// AUTHENTICATION HELPERS
 // ============================================================
 
 function requireLogin(req, res, next) {
-
     if (!req.session.userId) {
         return res.status(401).json({
             message: "Please log in first."
@@ -212,7 +236,6 @@ function requireLogin(req, res, next) {
 }
 
 function requireAdmin(req, res, next) {
-
     if (!req.session.userId) {
         return res.status(401).json({
             message: "Please log in first."
@@ -229,7 +252,6 @@ function requireAdmin(req, res, next) {
 }
 
 function requireStudent(req, res, next) {
-
     if (!req.session.userId) {
         return res.status(401).json({
             message: "Please log in first."
@@ -246,7 +268,6 @@ function requireStudent(req, res, next) {
 }
 
 function requireOwnUser(req, res, next) {
-
     const requestedUserId = Number(req.params.userId);
 
     if (
@@ -262,7 +283,6 @@ function requireOwnUser(req, res, next) {
 }
 
 async function getOwnedNote(noteId, userId) {
-
     return await dbGet(
         `SELECT *
          FROM Notes
@@ -276,7 +296,6 @@ async function getOwnedNote(noteId, userId) {
 // ============================================================
 
 app.post("/register", asyncRoute(async (req, res) => {
-
     const { fullName, email, password } = req.body;
 
     if (
@@ -335,7 +354,6 @@ app.post("/register", asyncRoute(async (req, res) => {
         });
 
     } catch (error) {
-
         if (error.message.includes("UNIQUE")) {
             return res.status(400).json({
                 message: "An account with this email already exists."
@@ -347,11 +365,10 @@ app.post("/register", asyncRoute(async (req, res) => {
 }));
 
 // ============================================================
-// LOGIN - ADMIN AND STUDENT
+// LOGIN - STUDENT AND ADMIN
 // ============================================================
 
 app.post("/login", asyncRoute(async (req, res) => {
-
     const { email, password } = req.body;
 
     if (
@@ -366,7 +383,7 @@ app.post("/login", asyncRoute(async (req, res) => {
     }
 
     const user = await dbGet(
-        `SELECT * FROM Users WHERE LOWER(Email) = ?`,
+        "SELECT * FROM Users WHERE LOWER(Email) = ?",
         [email.trim().toLowerCase()]
     );
 
@@ -387,9 +404,9 @@ app.post("/login", asyncRoute(async (req, res) => {
         });
     }
 
-    // Regenerate session after successful login.
-    req.session.regenerate(err => {
+    // Create a fresh session after successful login.
 
+    req.session.regenerate(err => {
         if (err) {
             return res.status(500).json({
                 message: "Unable to start login session."
@@ -400,7 +417,6 @@ app.post("/login", asyncRoute(async (req, res) => {
         req.session.role = user.Role || "student";
 
         req.session.save(saveErr => {
-
             if (saveErr) {
                 return res.status(500).json({
                     message: "Unable to save login session."
@@ -422,10 +438,10 @@ app.post("/login", asyncRoute(async (req, res) => {
 // ============================================================
 
 app.get("/auth/me", requireLogin, asyncRoute(async (req, res) => {
-
     const user = await dbGet(
         `SELECT UserID, FullName, Email, Role
-         FROM Users WHERE UserID = ?`,
+         FROM Users
+         WHERE UserID = ?`,
         [req.session.userId]
     );
 
@@ -448,9 +464,7 @@ app.get("/auth/me", requireLogin, asyncRoute(async (req, res) => {
 // ============================================================
 
 app.post("/logout", requireLogin, (req, res) => {
-
     req.session.destroy(err => {
-
         if (err) {
             return res.status(500).json({
                 message: "Unable to log out."
@@ -470,7 +484,6 @@ app.post("/logout", requireLogin, (req, res) => {
 // ============================================================
 
 app.post("/notes", requireStudent, asyncRoute(async (req, res) => {
-
     const { moduleName, noteContent } = req.body;
 
     if (
@@ -589,7 +602,6 @@ app.delete(
             });
         }
 
-        // Delete related records and the note in one transaction.
         await dbRun("BEGIN TRANSACTION");
 
         try {
@@ -622,11 +634,10 @@ app.delete(
 );
 
 // ============================================================
-// CHAPTER DETECTION HELPER
+// CHAPTER DETECTION
 // ============================================================
 
 function getStudyChapters(noteContent) {
-
     const lines = noteContent.split(/\r?\n/);
 
     const chapterPattern =
@@ -648,7 +659,6 @@ function getStudyChapters(noteContent) {
     const matches = [];
 
     lines.forEach((line, index) => {
-
         const match = line.match(chapterPattern);
 
         if (!match) return;
@@ -695,7 +705,6 @@ function getStudyChapters(noteContent) {
         contentStart = secondChapterOne.start;
 
     } else if (contentsHeadingIndex !== -1) {
-
         const firstChapter = matches.find(
             chapter => chapter.start > contentsHeadingIndex
         );
@@ -762,11 +771,10 @@ app.get(
 );
 
 // ============================================================
-// GET CONTENT FOR SELECTED CHAPTER
+// GET SELECTED CHAPTER CONTENT
 // ============================================================
 
 function getSelectedContent(noteContent, chapter) {
-
     if (chapter === "all") {
         return {
             content: noteContent,
@@ -802,7 +810,7 @@ function getSelectedContent(noteContent, chapter) {
 }
 
 // ============================================================
-// GENERATE AI SUMMARY - CHAPTER SELECTION
+// GENERATE AI SUMMARY
 // ============================================================
 
 app.post(
@@ -889,11 +897,10 @@ ${selection.content}
 );
 
 // ============================================================
-// QUIZ VALIDATION HELPER
+// QUIZ VALIDATION
 // ============================================================
 
 function validateGeneratedQuiz(quiz, quizType) {
-
     if (
         !quiz ||
         !Array.isArray(quiz.questions) ||
@@ -906,7 +913,6 @@ function validateGeneratedQuiz(quiz, quizType) {
     let trueFalseCount = 0;
 
     for (const question of quiz.questions) {
-
         if (
             typeof question.question !== "string" ||
             !question.question.trim() ||
@@ -941,8 +947,14 @@ function validateGeneratedQuiz(quiz, quizType) {
         }
     }
 
-    if (quizType === "multiple") return multipleCount === 10;
-    if (quizType === "truefalse") return trueFalseCount === 10;
+    if (quizType === "multiple") {
+        return multipleCount === 10;
+    }
+
+    if (quizType === "truefalse") {
+        return trueFalseCount === 10;
+    }
+
     if (quizType === "mixed") {
         return multipleCount === 5 && trueFalseCount === 5;
     }
@@ -1072,7 +1084,6 @@ ${selection.content}
         let quiz = null;
 
         for (let attempt = 1; attempt <= 3; attempt++) {
-
             console.log(
                 `Generating ${quizType} quiz - attempt ${attempt}/3`
             );
@@ -1090,7 +1101,6 @@ There MUST be exactly 10 questions.
 Return ONLY valid JSON.`;
 
             const response = await generateWithGemini(retryPrompt);
-
             let quizText = response.text;
 
             if (!quizText) continue;
@@ -1109,7 +1119,10 @@ Return ONLY valid JSON.`;
                 }
 
             } catch (error) {
-                console.error("Invalid quiz JSON:", error.message);
+                console.error(
+                    "Invalid quiz JSON:",
+                    error.message
+                );
             }
         }
 
@@ -1255,7 +1268,6 @@ app.get(
             "Complete a quiz to assess your readiness.";
 
         if (quizzesCompleted > 0) {
-
             studyReadiness = `${averageQuizScore}%`;
 
             if (averageQuizScore >= 80) {
@@ -1277,7 +1289,6 @@ app.get(
             "Complete more quizzes to track improvement.";
 
         if (quizzesCompleted >= 2) {
-
             const difference =
                 history[0].Percentage - history[1].Percentage;
 
@@ -1463,8 +1474,7 @@ app.get(
         );
 
         const quizzes = await dbGet(
-            `SELECT COUNT(*) AS totalQuizzes
-             FROM QuizScores`
+            "SELECT COUNT(*) AS totalQuizzes FROM QuizScores"
         );
 
         const average = await dbGet(
@@ -1509,10 +1519,8 @@ app.get(
                 COUNT(DISTINCT n.NoteID) AS NotesCount,
                 COUNT(DISTINCT qs.ScoreID) AS QuizzesCompleted
              FROM Users u
-             LEFT JOIN Notes n
-                ON n.UserID = u.UserID
-             LEFT JOIN QuizScores qs
-                ON qs.UserID = u.UserID
+             LEFT JOIN Notes n ON n.UserID = u.UserID
+             LEFT JOIN QuizScores qs ON qs.UserID = u.UserID
              GROUP BY
                 u.UserID,
                 u.FullName,
@@ -1524,7 +1532,6 @@ app.get(
         res.json({ users });
     })
 );
-
 
 // ============================================================
 // ADMIN - VIEW INDIVIDUAL STUDENT DETAILS
@@ -1543,7 +1550,6 @@ app.get(
             });
         }
 
-        // Get student information.
         const student = await dbGet(
             `SELECT UserID, FullName, Email, Role
              FROM Users
@@ -1557,7 +1563,6 @@ app.get(
             });
         }
 
-        // Get uploaded study materials.
         const materials = await dbAll(
             `SELECT NoteID, ModuleName, UploadDate
              FROM Notes
@@ -1566,7 +1571,6 @@ app.get(
             [userId]
         );
 
-        // Get the student's saved AI summaries.
         const summaries = await dbAll(
             `SELECT
                 ar.ResultID,
@@ -1581,7 +1585,6 @@ app.get(
             [userId]
         );
 
-        // Get completed quizzes with chapter and quiz type.
         const quizzes = await dbAll(
             `SELECT
                 qs.ScoreID,
@@ -1600,7 +1603,6 @@ app.get(
             [userId, userId]
         );
 
-        // Calculate average quiz score.
         const average = await dbGet(
             `SELECT ROUND(AVG(Percentage)) AS AverageScore
              FROM QuizScores
@@ -1608,7 +1610,6 @@ app.get(
             [userId]
         );
 
-        // Calculate average performance for each module.
         const modulePerformance = await dbAll(
             `SELECT
                 n.ModuleName,
@@ -1624,7 +1625,6 @@ app.get(
             [userId, userId]
         );
 
-        // Get feedback submitted by this student.
         const feedback = await dbAll(
             `SELECT Rating, Comment, CreatedAt
              FROM Feedback
@@ -1648,7 +1648,6 @@ app.get(
     })
 );
 
-
 // ============================================================
 // ADMIN - VIEW STUDENT ACTIVITY
 // ============================================================
@@ -1670,10 +1669,8 @@ app.get(
                 qs.Percentage,
                 qs.CompletedAt
              FROM QuizScores qs
-             INNER JOIN Users u
-                ON qs.UserID = u.UserID
-             INNER JOIN Notes n
-                ON qs.NoteID = n.NoteID
+             INNER JOIN Users u ON qs.UserID = u.UserID
+             INNER JOIN Notes n ON qs.NoteID = n.NoteID
              ORDER BY qs.CompletedAt DESC, qs.ScoreID DESC
              LIMIT 50`
         );
@@ -1716,7 +1713,6 @@ app.delete(
             });
         }
 
-        // Protect admin accounts from accidental deletion.
         if (user.Role === "admin") {
             return res.status(403).json({
                 message: "Admin accounts cannot be deleted here."
@@ -1727,6 +1723,11 @@ app.delete(
 
         try {
             await dbRun(
+                "DELETE FROM Feedback WHERE UserID = ?",
+                [userId]
+            );
+
+            await dbRun(
                 "DELETE FROM QuizScores WHERE UserID = ?",
                 [userId]
             );
@@ -1734,7 +1735,9 @@ app.delete(
             await dbRun(
                 `DELETE FROM AIResults
                  WHERE NoteID IN (
-                     SELECT NoteID FROM Notes WHERE UserID = ?
+                     SELECT NoteID
+                     FROM Notes
+                     WHERE UserID = ?
                  )`,
                 [userId]
             );
@@ -1745,7 +1748,8 @@ app.delete(
             );
 
             await dbRun(
-                "DELETE FROM Users WHERE UserID = ? AND Role = 'student'",
+                `DELETE FROM Users
+                 WHERE UserID = ? AND Role = 'student'`,
                 [userId]
             );
 
@@ -1762,136 +1766,142 @@ app.delete(
     })
 );
 
+// ============================================================
+// ADMIN - BACKUP DATABASE
+// ============================================================
 
- // ============================================================
- // ADMIN - BACKUP DATABASE
- // ============================================================
+app.get(
+    "/admin/backup",
+    requireAdmin,
+    asyncRoute(async (req, res) => {
 
- app.get("/admin/backup", requireAdmin, asyncRoute(async (req, res) => {
+        const timestamp = new Date()
+            .toISOString()
+            .replace(/[:.]/g, "-");
 
-     // Create a unique backup filename using the current date and time.
-     const timestamp = new Date()
-         .toISOString()
-         .replace(/[:.]/g, "-");
+        const filename = `marco_backup_${timestamp}.db`;
+        const backupPath = path.join(os.tmpdir(), filename);
 
-     const filename = `marco_backup_${timestamp}.db`;
+        try {
+            await db.backup(backupPath);
 
-     // Save the temporary backup in the operating system's temp folder.
-     const path = require("path");
-     const os = require("os");
-     const fs = require("fs");
+            res.download(backupPath, filename, err => {
+                fs.unlink(backupPath, () => {});
 
-     const backupPath = path.join(os.tmpdir(), filename);
+                if (err) {
+                    console.error(
+                        "Backup download failed:",
+                        err.message
+                    );
+                }
+            });
 
-     try {
+        } catch (error) {
+            fs.unlink(backupPath, () => {});
 
-         // Use SQLite's backup function to safely copy the live database.
-         await db.backup(backupPath);
+            console.error(
+                "Database backup failed:",
+                error.message
+            );
 
-         // Download the backup to the administrator's computer.
-         res.download(backupPath, filename, (err) => {
+            if (!res.headersSent) {
+                res.status(500).json({
+                    message: "Database backup failed."
+                });
+            }
+        }
+    })
+);
 
-             // Remove the temporary backup after the download finishes.
-             fs.unlink(backupPath, () => {});
+// ============================================================
+// STUDENT - SUBMIT FEEDBACK
+// ============================================================
 
-             if (err) {
-                 console.error("Backup download failed:", err.message);
-             }
-         });
+app.post(
+    "/feedback",
+    requireStudent,
+    asyncRoute(async (req, res) => {
 
-     } catch (error) {
+        const { rating, comment } = req.body;
 
-         // Clean up if the backup fails.
-         fs.unlink(backupPath, () => {});
+        if (
+            !Number.isInteger(rating) ||
+            rating < 1 ||
+            rating > 5
+        ) {
+            return res.status(400).json({
+                message: "Please select a rating between 1 and 5."
+            });
+        }
 
-         console.error("Database backup failed:", error.message);
+        if (
+            typeof comment !== "string" ||
+            !comment.trim()
+        ) {
+            return res.status(400).json({
+                message: "Please enter your feedback."
+            });
+        }
 
-         if (!res.headersSent) {
-             res.status(500).json({
-                 message: "Database backup failed."
-             });
-         }
-     }
- }));
+        await dbRun(
+            `INSERT INTO Feedback
+             (UserID, Rating, Comment)
+             VALUES (?, ?, ?)`,
+            [
+                req.session.userId,
+                rating,
+                comment.trim()
+            ]
+        );
 
+        res.status(201).json({
+            message: "Thank you! Your feedback has been submitted."
+        });
+    })
+);
 
- // ============================================================
- // STUDENT - SUBMIT FEEDBACK
- // ============================================================
+// ============================================================
+// ADMIN - VIEW STUDENT FEEDBACK
+// ============================================================
 
- app.post("/feedback", requireStudent, asyncRoute(async (req, res) => {
+app.get(
+    "/admin/feedback",
+    requireAdmin,
+    asyncRoute(async (req, res) => {
 
-     const { rating, comment } = req.body;
+        const feedback = await dbAll(
+            `SELECT
+                f.FeedbackID,
+                u.FullName,
+                u.Email,
+                f.Rating,
+                f.Comment,
+                f.CreatedAt
+             FROM Feedback f
+             INNER JOIN Users u ON f.UserID = u.UserID
+             ORDER BY f.CreatedAt DESC, f.FeedbackID DESC`
+        );
 
-     // Make sure the student selected a valid rating.
-     if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-         return res.status(400).json({
-             message: "Please select a rating between 1 and 5."
-         });
-     }
+        const stats = await dbGet(
+            `SELECT
+                COUNT(*) AS totalReviews,
+                ROUND(AVG(Rating), 1) AS averageRating
+             FROM Feedback`
+        );
 
-     // Make sure the student entered feedback.
-     if (typeof comment !== "string" || !comment.trim()) {
-         return res.status(400).json({
-             message: "Please enter your feedback."
-         });
-     }
-
-     // Save the review under the logged-in student's account.
-     await dbRun(
-         `INSERT INTO Feedback (UserID, Rating, Comment)
-          VALUES (?, ?, ?)`,
-         [req.session.userId, rating, comment.trim()]
-     );
-
-     res.status(201).json({
-         message: "Thank you! Your feedback has been submitted."
-     });
- }));
-
-
- // ============================================================
- // ADMIN - VIEW STUDENT FEEDBACK
- // ============================================================
-
- app.get("/admin/feedback", requireAdmin, asyncRoute(async (req, res) => {
-
-     // Get all reviews with student names.
-     const feedback = await dbAll(
-         `SELECT
-             f.FeedbackID,
-             u.FullName,
-             u.Email,
-             f.Rating,
-             f.Comment,
-             f.CreatedAt
-          FROM Feedback f
-          INNER JOIN Users u ON f.UserID = u.UserID
-          ORDER BY f.CreatedAt DESC, f.FeedbackID DESC`
-     );
-
-     // Calculate the total reviews and average rating.
-     const stats = await dbGet(
-         `SELECT
-             COUNT(*) AS totalReviews,
-             ROUND(AVG(Rating), 1) AS averageRating
-          FROM Feedback`
-     );
-
-     res.json({
-         feedback,
-         totalReviews: stats.totalReviews || 0,
-         averageRating: stats.averageRating || 0
-     });
- }));
-
+        res.json({
+            feedback,
+            totalReviews: stats.totalReviews || 0,
+            averageRating: stats.averageRating || 0
+        });
+    })
+);
 
 // ============================================================
 // ERROR HANDLING
 // ============================================================
 
 app.use((err, req, res, next) => {
-
     console.error("Server error:", err);
 
     if (err instanceof multer.MulterError) {
@@ -1910,7 +1920,6 @@ app.use((err, req, res, next) => {
 // ============================================================
 
 app.listen(PORT, () => {
-
     console.log(
         `Marco server running on http://localhost:${PORT}`
     );
@@ -1918,8 +1927,12 @@ app.listen(PORT, () => {
     if (process.env.GEMINI_API_KEY) {
         console.log("Gemini API key loaded successfully.");
     } else {
-        console.log("WARNING: Gemini API key was not found.");
+        console.log(
+            "WARNING: Gemini API key was not found."
+        );
     }
 
-    console.log("Student and admin authentication enabled.");
+    console.log(
+        "Student and admin authentication enabled."
+    );
 });

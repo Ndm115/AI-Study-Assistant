@@ -302,26 +302,21 @@ async function handleFileUpload() {
 // SIMPLE MARKDOWN FORMATTER
 // ============================================================
 
+
 function formatMarkdown(text) {
 
-    return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
+    // Use the Marked library for proper Markdown formatting.
+    if (window.marked) {
+        return marked.parse(String(text || ""));
+    }
 
-        .replace(/\\\*/g, "*")
-        .replace(/\\\|/g, "|")
-        .replace(/\\\\/g, "\\")
+    // Safe fallback if the library is unavailable.
+    const div = document.createElement("div");
+    div.textContent = String(text || "");
 
-        .replace(/^### (.*)$/gm, "<h4>$1</h4>")
-        .replace(/^## (.*)$/gm, "<h3>$1</h3>")
-        .replace(/^# (.*)$/gm, "<h2>$1</h2>")
-
-        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-        .replace(/^\* (.*)$/gm, "<li>$1</li>")
-        .replace(/^---$/gm, "<hr>")
-        .replace(/\n/g, "<br>");
+    return div.innerHTML.replace(/\n/g, "<br>");
 }
+
 
 // ============================================================
 // PAGE CONTENT PERSISTENCE
@@ -354,6 +349,7 @@ function saveSummaryState(moduleName, summary) {
         moduleName: moduleName,
         summary: summary
     }));
+    updateSummaryDownloadButton();
 }
 
 function loadSummaryState() {
@@ -384,6 +380,7 @@ function loadSummaryState() {
             data.moduleName + " Summary";
 
         summaryText.innerHTML = formatMarkdown(data.summary);
+        updateSummaryDownloadButton();
 
         document.getElementById("summaryMessage").textContent =
             "Saved summary restored.";
@@ -417,6 +414,8 @@ function clearSummary() {
     if (summaryMessage) {
         summaryMessage.textContent = "Summary cleared.";
     }
+
+    updateSummaryDownloadButton();
 }
 
 // ============================================================
@@ -498,6 +497,14 @@ function loadQuizState() {
         document.getElementById("submitQuizButton").style.display =
             quizSubmitted ? "none" : "inline-block";
 
+        const downloadButton = document.getElementById("downloadQuizButton");
+
+        if (downloadButton) {
+            downloadButton.style.display = quizSubmitted
+                ? "inline-block"
+                : "none";
+        }
+
     } catch (error) {
         console.error("Unable to restore quiz:", error);
     }
@@ -542,6 +549,9 @@ function clearQuiz() {
     if (submitButton) {
         submitButton.style.display = "none";
     }
+
+    const downloadButton = document.getElementById("downloadQuizButton");
+    if (downloadButton) downloadButton.style.display = "none";
 }
 
 // ============================================================
@@ -943,6 +953,7 @@ async function generateQuiz() {
     quizMessage.textContent = "Generating your quiz...";
     quizContainer.innerHTML = "";
     quizResult.innerHTML = "";
+    document.getElementById("downloadQuizButton").style.display = "none";
     submitButton.style.display = "none";
 
     try {
@@ -1078,6 +1089,9 @@ async function submitQuiz() {
 
         const selectedAnswer = Number(selected.value);
 
+        // Remember the student's answer for the PDF report.
+        question.selectedAnswer = selectedAnswer;
+
         const questionBox =
             document.querySelectorAll(".quiz-question")[questionIndex];
 
@@ -1133,6 +1147,8 @@ async function submitQuiz() {
     `;
 
     quizSubmitted = true;
+
+    document.getElementById("downloadQuizButton").style.display = "inline-block";
 
     document.getElementById("submitQuizButton").style.display = "none";
 
@@ -2151,6 +2167,7 @@ window.onload = function () {
     // Summary.
     loadSummaryChapters();
     loadSummaryState();
+    updateSummaryDownloadButton();
 
     // Quiz.
     loadQuizState();
@@ -2276,7 +2293,7 @@ logoutUser = async function () {
 
 async function checkLoginSession() {
 
-        if (window.location.protocol === "file:") {
+    if (window.location.protocol === "file:") {
         return;
     }
 
@@ -2707,9 +2724,30 @@ async function viewAdminStudentDetails(userId) {
 
     try {
 
+
         const data = await adminFetch("/admin/students/" + userId);
 
         container.innerHTML = "";
+
+        // Add a PDF download button for this student.
+        const oldButton = document.getElementById("downloadStudentPdf");
+
+        if (oldButton) {
+            oldButton.remove();
+        }
+
+        const downloadButton = document.createElement("button");
+        downloadButton.id = "downloadStudentPdf";
+        downloadButton.type = "button";
+        downloadButton.textContent = "Download PDF";
+        downloadButton.style.marginBottom = "15px";
+
+        downloadButton.onclick = function () {
+            downloadStudentReport(data);
+        };
+
+        container.appendChild(downloadButton);
+
 
         // Safely display text without inserting raw HTML.
         function addText(parent, tag, value) {
@@ -3176,4 +3214,585 @@ async function loadAdminFeedback() {
             '<tr><td colspan="5">Could not connect to the server.</td></tr>';
     }
 }
+
+
+// ============================================================
+// ADMIN - DOWNLOAD INDIVIDUAL STUDENT PDF REPORT
+// ============================================================
+
+function downloadStudentReport(data) {
+
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert("PDF library could not load. Check your internet connection.");
+        return;
+    }
+
+    const pdf = new window.jspdf.jsPDF();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    let y = 20;
+
+    // Add a new page when the current page is full.
+    function checkPage(height = 12) {
+        if (y + height > pageHeight - 20) {
+            pdf.addPage();
+            y = 20;
+        }
+    }
+
+    // Add a section heading.
+    function addHeading(title) {
+        checkPage(18);
+        y += 6;
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(13);
+        pdf.text(title, 15, y);
+        y += 8;
+    }
+
+    // Add ordinary text, wrapping long lines.
+    function addText(text) {
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10);
+
+        const lines = pdf.splitTextToSize(
+            String(text ?? ""),
+            pageWidth - 30
+        );
+
+        lines.forEach(line => {
+            checkPage(6);
+            pdf.text(line, 15, y);
+            y += 5;
+        });
+
+        y += 3;
+    }
+
+    // Add a table using the PDF table library.
+    function addTable(headings, rows) {
+
+        if (!rows || rows.length === 0) {
+            addText("No records available.");
+            return;
+        }
+
+        if (typeof pdf.autoTable !== "function") {
+            addText("Unable to generate report table.");
+            return;
+        }
+
+        pdf.autoTable({
+            startY: y,
+            head: [headings],
+            body: rows.map(row =>
+                row.map(value => String(value ?? ""))
+            ),
+            margin: { left: 15, right: 15 },
+            theme: "grid",
+            styles: {
+                fontSize: 8,
+                cellPadding: 3,
+                overflow: "linebreak"
+            },
+            headStyles: {
+                fillColor: [35, 95, 180]
+            }
+        });
+
+        y = pdf.lastAutoTable.finalY + 8;
+    }
+
+    // --------------------------------------------------------
+    // REPORT TITLE
+    // --------------------------------------------------------
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(18);
+    pdf.text("Marco AI Study Assistant", 15, y);
+
+    y += 10;
+
+    pdf.setFontSize(14);
+    pdf.text("Student Progress Report", 15, y);
+
+    y += 10;
+
+    pdf.setDrawColor(35, 95, 180);
+    pdf.line(15, y, pageWidth - 15, y);
+
+    y += 12;
+
+    // --------------------------------------------------------
+    // STUDENT INFORMATION
+    // --------------------------------------------------------
+
+    addHeading("Student Information");
+
+    addText("Name: " + data.student.FullName);
+    addText("Email: " + data.student.Email);
+    addText("Role: " + data.student.Role);
+    addText("Report Date: " + new Date().toLocaleString());
+
+    // --------------------------------------------------------
+    // STUDENT STATISTICS
+    // --------------------------------------------------------
+
+    addHeading("Student Statistics");
+
+    addTable(
+        ["Statistic", "Value"],
+        [
+            ["Study Materials", data.materialsCount],
+            ["Saved Summaries", data.summariesCount],
+            ["Completed Quizzes", data.quizzesCount],
+            ["Average Quiz Score", data.averageScore + "%"]
+        ]
+    );
+
+    // --------------------------------------------------------
+    // STUDY MATERIALS
+    // --------------------------------------------------------
+
+    addHeading("Study Materials");
+
+    addTable(
+        ["Module", "Upload Date"],
+        data.materials.map(material => [
+            material.ModuleName,
+            material.UploadDate
+        ])
+    );
+
+    // --------------------------------------------------------
+    // SAVED AI SUMMARIES
+    // --------------------------------------------------------
+
+    addHeading("Saved AI Summaries");
+
+    if (data.summaries.length === 0) {
+
+        addText("No AI summaries generated yet.");
+
+    } else {
+
+        data.summaries.forEach((summary, index) => {
+
+            checkPage(18);
+
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(10);
+
+            const title = pdf.splitTextToSize(
+                (index + 1) + ". " + summary.ModuleName,
+                pageWidth - 30
+            );
+
+            title.forEach(line => {
+                checkPage(6);
+                pdf.text(line, 15, y);
+                y += 5;
+            });
+
+            y += 2;
+
+            addText("Created: " + (summary.CreatedAt || "Unknown"));
+
+            // Include the actual saved summary content.
+            // Remove Markdown formatting for readable PDF text.
+            const summaryText = String(summary.Summary || "")
+                .replace(/```[\s\S]*?```/g, "[Code block]")
+                .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+                .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+                .replace(/[#*`_~]/g, "")
+                .replace(/[^\x20-\x7E\n\r\t]/g, "");
+
+            addText(summaryText);
+            y += 3;
+        });
+    }
+
+    // --------------------------------------------------------
+    // MODULE QUIZ PERFORMANCE
+    // --------------------------------------------------------
+
+    addHeading("Module Quiz Performance");
+
+    addTable(
+        ["Module", "Quizzes", "Average", "Highest"],
+        data.modulePerformance.map(module => [
+            module.ModuleName,
+            module.QuizzesCompleted,
+            module.AverageScore + "%",
+            module.HighestScore + "%"
+        ])
+    );
+
+    // --------------------------------------------------------
+    // DETAILED QUIZ HISTORY
+    // --------------------------------------------------------
+
+    addHeading("Detailed Quiz History");
+
+    addTable(
+        ["Module", "Type", "Chapter", "Score", "Percentage", "Date"],
+        data.quizzes.map(quiz => [
+            quiz.ModuleName,
+            quiz.QuizType,
+            quiz.Chapter === "all" ? "All Chapters" : quiz.Chapter,
+            quiz.Score + "/" + quiz.TotalQuestions,
+            quiz.Percentage + "%",
+            quiz.CompletedAt
+        ])
+    );
+
+    // --------------------------------------------------------
+    // STUDENT FEEDBACK
+    // --------------------------------------------------------
+
+    addHeading("Student Feedback");
+
+    addTable(
+        ["Rating", "Feedback", "Date"],
+        data.feedback.map(review => [
+            review.Rating + "/5",
+            review.Comment,
+            review.CreatedAt
+        ])
+    );
+
+    // --------------------------------------------------------
+    // PAGE NUMBERS
+    // --------------------------------------------------------
+
+    const totalPages = pdf.internal.getNumberOfPages();
+
+    for (let page = 1; page <= totalPages; page++) {
+
+        pdf.setPage(page);
+        pdf.setFontSize(9);
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(100);
+
+        pdf.text(
+            "Marco AI Study Assistant - Page " + page + " of " + totalPages,
+            pageWidth / 2,
+            pageHeight - 10,
+            { align: "center" }
+        );
+    }
+
+    // --------------------------------------------------------
+    // DOWNLOAD PDF
+    // --------------------------------------------------------
+
+    const studentName = String(data.student.FullName || "Student")
+        .replace(/[^a-zA-Z0-9_-]/g, "_");
+
+    pdf.save("Marco_Student_Report_" + studentName + ".pdf");
+}
+
+
+
+// ============================================================
+// DOWNLOAD FORMATTED AI SUMMARY AS PDF
+// ============================================================
+function updateSummaryDownloadButton() {
+
+    const button = document.getElementById("downloadSummaryButton");
+
+    if (!button) return;
+
+    const key = getStudyStorageKey("summary");
+    const saved = key ? localStorage.getItem(key) : null;
+
+    button.disabled = !saved;
+    button.style.display = saved ? "inline-block" : "none";
+}
+
+
+function downloadSummaryPDF() {
+
+    const key = getStudyStorageKey("summary");
+    const saved = key ? localStorage.getItem(key) : null;
+
+    if (!saved) {
+        alert("Please generate a summary first.");
+        return;
+    }
+
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert("PDF library could not load.");
+        return;
+    }
+
+    const data = JSON.parse(saved);
+    const pdf = new window.jspdf.jsPDF();
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    const margin = 20;
+    const maxWidth = pageWidth - margin * 2;
+
+    let y = 20;
+
+    // Add a new page when there is not enough space.
+    function checkPage(height = 8) {
+        if (y + height > pageHeight - 20) {
+            pdf.addPage();
+            y = 20;
+        }
+    }
+
+    // Write text with automatic wrapping.
+    function addText(text, fontSize = 11, bold = false, spacing = 6) {
+
+        pdf.setFont("helvetica", bold ? "bold" : "normal");
+        pdf.setFontSize(fontSize);
+
+        const lines = pdf.splitTextToSize(text, maxWidth);
+
+        lines.forEach(line => {
+            checkPage(spacing);
+            pdf.text(line, margin, y);
+            y += spacing;
+        });
+    }
+
+    // Main document heading.
+    pdf.setTextColor(35, 65, 110);
+    addText("MARCO AI STUDY ASSISTANT", 18, true, 9);
+
+    y += 4;
+
+    pdf.setTextColor(30, 30, 30);
+    addText(data.moduleName + " Summary", 15, true, 8);
+
+    y += 8;
+
+    // Process each Markdown line.
+    const contentLines = data.summary.split("\n");
+
+    contentLines.forEach(rawLine => {
+
+        let line = rawLine.trim();
+
+        // Empty line.
+        if (!line) {
+            y += 3;
+            return;
+        }
+
+        // Horizontal divider.
+        if (line === "---") {
+            checkPage(8);
+            pdf.setDrawColor(200, 200, 200);
+            pdf.line(margin, y, pageWidth - margin, y);
+            y += 8;
+            return;
+        }
+
+        // Remove Markdown bold markers.
+        line = line.replace(/\*\*/g, "");
+
+        // Main heading.
+        if (line.startsWith("# ")) {
+            y += 5;
+            pdf.setTextColor(35, 65, 110);
+            addText(line.substring(2), 15, true, 8);
+            pdf.setTextColor(30, 30, 30);
+            y += 3;
+        }
+
+        // Chapter heading.
+        else if (line.startsWith("## ")) {
+            y += 5;
+            pdf.setTextColor(35, 65, 110);
+            addText(line.substring(3), 13, true, 7);
+            pdf.setTextColor(30, 30, 30);
+            y += 3;
+        }
+
+        // Section heading.
+        else if (line.startsWith("### ")) {
+            y += 4;
+            addText(line.substring(4), 12, true, 7);
+            y += 2;
+        }
+
+        // Bullet points.
+        else if (line.startsWith("* ") || line.startsWith("- ")) {
+            addText("• " + line.substring(2), 11, false, 6);
+            y += 2;
+        }
+
+        // Regular text.
+        else {
+            addText(line, 11, false, 6);
+            y += 2;
+        }
+    });
+
+    // Add page numbers.
+    const totalPages = pdf.internal.getNumberOfPages();
+
+    for (let i = 1; i <= totalPages; i++) {
+
+        pdf.setPage(i);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(9);
+        pdf.setTextColor(120, 120, 120);
+
+        pdf.text(
+            "Marco AI Study Assistant | Page " + i + " of " + totalPages,
+            pageWidth / 2,
+            pageHeight - 10,
+            { align: "center" }
+        );
+    }
+
+    // Save the PDF.
+    const fileName = data.moduleName.replace(/[^a-z0-9]/gi, "_");
+
+    pdf.save("Marco_Summary_" + fileName + ".pdf");
+}
+
+
+// ============================================================
+// DOWNLOAD QUIZ RESULTS AS PDF
+// ============================================================
+
+function downloadQuizPDF() {
+
+    if (!quizSubmitted || currentQuiz.length === 0) {
+        alert("Please complete a quiz first.");
+        return;
+    }
+
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert("PDF library could not load.");
+        return;
+    }
+
+    const pdf = new window.jspdf.jsPDF();
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    const margin = 20;
+    const maxWidth = pageWidth - margin * 2;
+
+    let y = 20;
+
+    // Start a new page when needed.
+    function checkPage(height = 8) {
+        if (y + height > pageHeight - 20) {
+            pdf.addPage();
+            y = 20;
+        }
+    }
+
+    // Add wrapped text.
+    function addText(text, fontSize = 11, bold = false) {
+
+        pdf.setFont("helvetica", bold ? "bold" : "normal");
+        pdf.setFontSize(fontSize);
+
+        const lines = pdf.splitTextToSize(String(text), maxWidth);
+
+        lines.forEach(line => {
+            checkPage(7);
+            pdf.text(line, margin, y);
+            y += 7;
+        });
+    }
+
+    // Calculate the score using saved student answers.
+    let score = 0;
+
+    currentQuiz.forEach(question => {
+        if (question.selectedAnswer === question.correctAnswer) {
+            score++;
+        }
+    });
+
+    const percentage = Math.round(
+        (score / currentQuiz.length) * 100
+    );
+
+    // PDF heading.
+    pdf.setTextColor(35, 65, 110);
+    addText("MARCO AI STUDY ASSISTANT", 18, true);
+
+    y += 5;
+
+    pdf.setTextColor(30, 30, 30);
+    addText(document.getElementById("quizTitle").textContent, 15, true);
+
+    y += 5;
+
+    addText("Student: " + (localStorage.getItem("fullName") || "Student"));
+    addText("Score: " + score + "/" + currentQuiz.length);
+    addText("Percentage: " + percentage + "%");
+    addText("Date: " + new Date().toLocaleDateString());
+
+    y += 10;
+
+    // Questions and answers.
+    currentQuiz.forEach((question, index) => {
+
+        checkPage(25);
+
+        pdf.setTextColor(35, 65, 110);
+        addText((index + 1) + ". " + question.question, 12, true);
+
+        y += 3;
+
+        pdf.setTextColor(30, 30, 30);
+
+        const selected = question.selectedAnswer;
+
+        const studentAnswer = selected === undefined
+            ? "Not recorded"
+            : question.options[selected];
+
+        const correctAnswer = question.options[question.correctAnswer];
+
+        addText("Your Answer: " + studentAnswer);
+        addText("Correct Answer: " + correctAnswer);
+
+        const isCorrect = selected === question.correctAnswer;
+
+        addText("Result: " + (isCorrect ? "Correct" : "Incorrect"));
+
+        y += 8;
+    });
+
+    // Page numbers.
+    const totalPages = pdf.internal.getNumberOfPages();
+
+    for (let i = 1; i <= totalPages; i++) {
+
+        pdf.setPage(i);
+        pdf.setFontSize(9);
+        pdf.setTextColor(120, 120, 120);
+
+        pdf.text(
+            "Marco AI Study Assistant | Page " + i + " of " + totalPages,
+            pageWidth / 2,
+            pageHeight - 10,
+            { align: "center" }
+        );
+    }
+
+    const moduleName = (
+        document.getElementById("quizTitle").textContent || "Quiz"
+    ).replace(/[^a-z0-9]/gi, "_");
+
+    pdf.save("Marco_Quiz_Results_" + moduleName + ".pdf");
+}
+
+
 

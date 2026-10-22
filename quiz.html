@@ -1,6 +1,6 @@
-
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Quiz Generator</title>
     <link rel="stylesheet" href="style.css">
@@ -8,75 +8,81 @@
 
 <body>
 
-<div class="sidebar">
-    <div class="logo-box">
-        <div class="logo-circle">M</div>
-        <h2>Marco AI Tutor</h2>
+    <div class="sidebar">
+        <div class="logo-box">
+            <div class="logo-circle">M</div>
+            <h2>Marco AI Tutor</h2>
+        </div>
+
+        <a href="dashboard.html">Dashboard</a>
+        <a href="upload.html">Upload Notes</a>
+        <a href="summary.html">Summary</a>
+        <a href="quiz.html" class="active">Quiz Generator</a>
+        <a href="tutor.html">AI Tutor</a>
+        <a href="feedback.html">Feedback</a>
+        <a href="#" onclick="logoutUser()">Logout</a>
+
+        <button type="button" class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
     </div>
 
-    <a href="dashboard.html">Dashboard</a>
-    <a href="upload.html">Upload Notes</a>
-    <a href="summary.html">Summary</a>
-    <a href="quiz.html" class="active">Quiz Generator</a>
-    <a href="tutor.html">AI Tutor</a>
-    <a href="feedback.html">Feedback</a>
-    <a href="#" onclick="logoutUser()">Logout</a>
 
-    <button type="button" class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
-</div>
+    <div class="main">
 
+        <div class="hero-header">
+            <h1>Quiz Generator</h1>
+            <p>Test your understanding with AI-generated revision questions.</p>
+        </div>
 
-<div class="main">
+        <div class="result-box">
 
-    <div class="hero-header">
-        <h1>Quiz Generator</h1>
-        <p>Test your understanding with AI-generated revision questions.</p>
-    </div>
+            <h3 id="quizTitle">Quiz Questions</h3>
 
-    <div class="result-box">
+            <p id="quizMessage">Generate a quiz from your saved study material.</p>
 
-        <h3 id="quizTitle">Quiz Questions</h3>
+            <!-- QUIZ SETTINGS -->
+            <div class="quiz-settings">
 
-        <p id="quizMessage">Generate a quiz from your saved study material.</p>
+                <h3>Quiz Settings</h3>
 
-        <!-- QUIZ SETTINGS -->
-        <div class="quiz-settings">
+                <!-- CHAPTER SELECTION -->
+                <label for="quizChapter">Select Chapter</label>
 
-            <h3>Quiz Settings</h3>
+                <select id="quizChapter">
+                    <option value="all">All Chapters</option>
+                </select>
 
-            <!-- CHAPTER SELECTION -->
-            <label for="quizChapter">Select Chapter</label>
+                <p>Select a specific chapter or generate questions from all chapters.</p>
 
-            <select id="quizChapter">
-                <option value="all">All Chapters</option>
-            </select>
+                <!-- QUIZ TYPE SELECTION -->
+                <label for="quizType">Select Quiz Type</label>
 
-            <p>Select a specific chapter or generate questions from all chapters.</p>
+                <select id="quizType">
+                    <option value="multiple">Multiple Choice</option>
+                    <option value="truefalse">True / False</option>
+                    <option value="mixed">Mixed Quiz</option>
+                </select>
 
-            <!-- QUIZ TYPE SELECTION -->
-            <label for="quizType">Select Quiz Type</label>
+                <p>Choose between multiple-choice questions, true/false questions, or a mixture of both.</p>
 
-            <select id="quizType">
-                <option value="multiple">Multiple Choice</option>
-                <option value="truefalse">True / False</option>
-                <option value="mixed">Mixed Quiz</option>
-            </select>
+            </div>
 
-            <p>Choose between multiple-choice questions, true/false questions, or a mixture of both.</p>
+            <button type="button" onclick="generateQuiz()">Generate Quiz</button>
+            <button type="button" onclick="clearQuiz()">Clear Quiz</button>
+
+            <div id="quizContainer"></div>
+
+            <button type="button" id="submitQuizButton" onclick="submitQuiz()" style="display: none;">
+                Submit Quiz
+            </button>
+
+            <div id="quizResult"></div>
+
+            <button type="button" id="downloadQuizButton" onclick="downloadQuizPDF()" style="display: none;">
+                Download Quiz Results PDF
+            </button>
 
         </div>
 
-        <button type="button" onclick="generateQuiz()">Generate Quiz</button>
-        <button type="button" onclick="clearQuiz()">Clear Quiz</button>
-
-        <div id="quizContainer"></div>
-
-        <button type="button" id="submitQuizButton"
-                onclick="submitQuiz()" style="display: none;">
-            Submit Quiz
-        </button>
-
-        <div id="quizResult"></div>
 
     </div>
 
@@ -87,9 +93,11 @@
 
     <button type="button" onclick="location.href='tutor.html'">Ask AI Tutor</button>
 
-</div>
+    </div>
 
-<script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+    <script src="script.js"></script>
 
 </body>
+
 </html>

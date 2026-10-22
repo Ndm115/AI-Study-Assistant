@@ -1,6 +1,6 @@
-
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Summary</title>
     <link rel="stylesheet" href="style.css">
@@ -8,68 +8,79 @@
 
 <body>
 
-<div class="sidebar">
-    <div class="logo-box">
-        <div class="logo-circle">M</div>
-        <h2>Marco AI Tutor</h2>
-    </div>
-
-    <a href="dashboard.html">Dashboard</a>
-    <a href="upload.html">Upload Notes</a>
-    <a href="summary.html" class="active">Summary</a>
-    <a href="quiz.html">Quiz Generator</a>
-    <a href="tutor.html">AI Tutor</a>
-    <a href="feedback.html">Feedback</a>
-    <a href="#" onclick="logoutUser()">Logout</a>
-
-    <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
-</div>
-
-
-<div class="main">
-
-    <div class="hero-header">
-        <h1>Generated Summary</h1>
-        <p>Review your AI-generated study summary below.</p>
-    </div>
-
-    <!-- CHAPTER SELECTION -->
-
-    <div class="card">
-        <h3>Select Chapter</h3>
-
-        <p>Choose which part of your study material to summarize.</p>
-
-        <label for="summaryChapter">Chapter:</label>
-
-        <select id="summaryChapter">
-            <option value="all">All Chapters</option>
-        </select>
-    </div>
-
-    <div class="result-box">
-        <h3 id="summaryTitle">Summary</h3>
-
-        <div id="summaryText">
-            Click the button below to generate a summary from your study material.
+    <div class="sidebar">
+        <div class="logo-box">
+            <div class="logo-circle">M</div>
+            <h2>Marco AI Tutor</h2>
         </div>
 
-        <p id="summaryMessage"></p>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="upload.html">Upload Notes</a>
+        <a href="summary.html" class="active">Summary</a>
+        <a href="quiz.html">Quiz Generator</a>
+        <a href="tutor.html">AI Tutor</a>
+        <a href="feedback.html">Feedback</a>
+        <a href="#" onclick="logoutUser()">Logout</a>
+
+        <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
     </div>
 
-    <button type="button" onclick="generateSummary(event)">Generate Summary</button>
-    <button type="button" onclick="clearSummary()">Clear Summary</button>
 
-    <div class="section-header">
-        <h2>Next Step</h2>
-        <p>Generate revision questions based on your study material.</p>
+    <div class="main">
+
+        <div class="hero-header">
+            <h1>Generated Summary</h1>
+            <p>Review your AI-generated study summary below.</p>
+        </div>
+
+        <!-- CHAPTER SELECTION -->
+
+        <div class="card">
+            <h3>Select Chapter</h3>
+
+            <p>Choose which part of your study material to summarize.</p>
+
+            <label for="summaryChapter">Chapter:</label>
+
+            <select id="summaryChapter">
+                <option value="all">All Chapters</option>
+            </select>
+        </div>
+
+        <div class="result-box">
+            <h3 id="summaryTitle">Summary</h3>
+
+            <div id="summaryText">
+                Click the button below to generate a summary from your study material.
+            </div>
+
+            <button type="button" id="downloadSummaryButton" onclick="downloadSummaryPDF()" disabled
+                style="display: none;">
+                Download Summary PDF
+            </button>
+
+            <p id="summaryMessage"></p>
+        </div>
+
+        <button type="button" onclick="generateSummary(event)">Generate Summary</button>
+        <button type="button" onclick="clearSummary()">Clear Summary</button>
+
+        <div class="section-header">
+            <h2>Next Step</h2>
+            <p>Generate revision questions based on your study material.</p>
+        </div>
+
+        <button onclick="location.href='quiz.html'">Generate Quiz</button>
+
     </div>
 
-    <button onclick="location.href='quiz.html'">Generate Quiz</button>
 
-</div>
 
-<script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+    <script src="script.js"></script>
+
 
 </body>
+
 </html>
