@@ -812,50 +812,50 @@ function getSelectedContent(noteContent, chapter) {
 }
 
 
- // ============================================================
- // GENERATE AI FLASHCARDS
- // ============================================================
+// ============================================================
+// GENERATE AI FLASHCARDS
+// ============================================================
 
- app.post(
-     "/generate-flashcards",
-     requireStudent,
-     asyncRoute(async (req, res) => {
+app.post(
+    "/generate-flashcards",
+    requireStudent,
+    asyncRoute(async (req, res) => {
 
-         const { noteId, chapter = "all" } = req.body;
+        const { noteId, chapter = "all" } = req.body;
 
-         // Check that study material was selected.
-         if (!noteId) {
-             return res.status(400).json({
-                 message: "Please select study material first."
-             });
-         }
+        // Check that study material was selected.
+        if (!noteId) {
+            return res.status(400).json({
+                message: "Please select study material first."
+            });
+        }
 
-         // Only allow students to use their own notes.
-         const note = await getOwnedNote(
-             noteId,
-             req.session.userId
-         );
+        // Only allow students to use their own notes.
+        const note = await getOwnedNote(
+            noteId,
+            req.session.userId
+        );
 
-         if (!note) {
-             return res.status(404).json({
-                 message: "Study material not found."
-             });
-         }
+        if (!note) {
+            return res.status(404).json({
+                message: "Study material not found."
+            });
+        }
 
-         // Reuse Marco's existing chapter selection.
-         const selection = getSelectedContent(
-             note.NoteContent,
-             chapter
-         );
+        // Reuse Marco's existing chapter selection.
+        const selection = getSelectedContent(
+            note.NoteContent,
+            chapter
+        );
 
-         if (!selection) {
-             return res.status(400).json({
-                 message: "Invalid or empty chapter selected."
-             });
-         }
+        if (!selection) {
+            return res.status(400).json({
+                message: "Invalid or empty chapter selected."
+            });
+        }
 
-         // Ask Gemini to generate flashcard questions and answers.
-         const prompt = `
+        // Ask Gemini to generate flashcard questions and answers.
+        const prompt = `
  You are an AI study assistant for university students.
 
  Generate exactly 10 useful revision flashcards
@@ -885,48 +885,48 @@ function getSelectedContent(noteContent, chapter) {
  ${selection.content}
          `;
 
-         const response = await generateWithGemini(prompt);
+        const response = await generateWithGemini(prompt);
 
-         // Remove Markdown code fences if Gemini includes them.
-         const cleaned = String(response.text || "")
-             .replace(/```json/gi, "")
-             .replace(/```/g, "")
-             .trim();
+        // Remove Markdown code fences if Gemini includes them.
+        const cleaned = String(response.text || "")
+            .replace(/```json/gi, "")
+            .replace(/```/g, "")
+            .trim();
 
-         let result;
+        let result;
 
-         try {
-             result = JSON.parse(cleaned);
-         } catch (error) {
-             return res.status(502).json({
-                 message: "Gemini returned an invalid flashcard format. Please try again."
-             });
-         }
+        try {
+            result = JSON.parse(cleaned);
+        } catch (error) {
+            return res.status(502).json({
+                message: "Gemini returned an invalid flashcard format. Please try again."
+            });
+        }
 
-         // Validate the generated flashcards.
-         if (
-             !Array.isArray(result.flashcards) ||
-             result.flashcards.length !== 10 ||
-             !result.flashcards.every(card =>
-                 typeof card.question === "string" &&
-                 card.question.trim() &&
-                 typeof card.answer === "string" &&
-                 card.answer.trim()
-             )
-         ) {
-             return res.status(502).json({
-                 message: "Flashcards could not be generated correctly. Please try again."
-             });
-         }
+        // Validate the generated flashcards.
+        if (
+            !Array.isArray(result.flashcards) ||
+            result.flashcards.length !== 10 ||
+            !result.flashcards.every(card =>
+                typeof card.question === "string" &&
+                card.question.trim() &&
+                typeof card.answer === "string" &&
+                card.answer.trim()
+            )
+        ) {
+            return res.status(502).json({
+                message: "Flashcards could not be generated correctly. Please try again."
+            });
+        }
 
-         res.json({
-             message: "Flashcards generated successfully!",
-             moduleName: note.ModuleName,
-             chapterTitle: selection.title,
-             flashcards: result.flashcards
-         });
-     })
- );
+        res.json({
+            message: "Flashcards generated successfully!",
+            moduleName: note.ModuleName,
+            chapterTitle: selection.title,
+            flashcards: result.flashcards
+        });
+    })
+);
 
 
 // ============================================================
@@ -1608,6 +1608,22 @@ app.get(
              WHERE AIAnswer IS NOT NULL`
         );
 
+        // Get overall Study Planner statistics.
+        const planner = await dbGet(
+            `SELECT
+        COUNT(*) AS totalStudySessions,
+        SUM(CASE WHEN Completed = 1 THEN 1 ELSE 0 END) AS completedStudySessions
+     FROM StudySessions`
+        );
+
+        // Calculate the percentage of completed sessions.
+        const totalStudySessions = planner.totalStudySessions || 0;
+        const completedStudySessions = planner.completedStudySessions || 0;
+
+        const studyCompletionRate = totalStudySessions > 0
+            ? Math.round((completedStudySessions / totalStudySessions) * 100)
+            : 0;
+
         res.json({
             totalUsers: users.totalUsers || 0,
             totalStudents: users.totalStudents || 0,
@@ -1616,10 +1632,37 @@ app.get(
             totalSummaries: summaries.totalSummaries || 0,
             totalQuizzes: quizzes.totalQuizzes || 0,
             averageQuizScore: average.averageQuizScore || 0,
-            totalTutorQuestions: tutor.totalTutorQuestions || 0
+            totalTutorQuestions: tutor.totalTutorQuestions || 0,
+
+            // Study Planner statistics
+            totalStudySessions,
+            completedStudySessions,
+            studyCompletionRate
         });
     })
 );
+
+
+// ============================================================
+// ADMIN - QUIZ PERFORMANCE CHART
+// ============================================================
+
+app.get("/admin/quiz-chart", requireAdmin, asyncRoute(async (req, res) => {
+
+    // Calculate the average quiz score for each module.
+    const performance = await dbAll(
+        `SELECT
+             n.ModuleName,
+             ROUND(AVG(qs.Percentage)) AS AverageScore
+          FROM QuizScores qs
+          INNER JOIN Notes n ON qs.NoteID = n.NoteID
+          GROUP BY n.ModuleName
+          ORDER BY n.ModuleName`
+    );
+
+    res.json({ performance });
+}));
+
 
 // ============================================================
 // ADMIN - VIEW REGISTERED USERS
@@ -1906,7 +1949,7 @@ app.get(
             await db.backup(backupPath);
 
             res.download(backupPath, filename, err => {
-                fs.unlink(backupPath, () => {});
+                fs.unlink(backupPath, () => { });
 
                 if (err) {
                     console.error(
@@ -1917,7 +1960,7 @@ app.get(
             });
 
         } catch (error) {
-            fs.unlink(backupPath, () => {});
+            fs.unlink(backupPath, () => { });
 
             console.error(
                 "Database backup failed:",
@@ -2036,94 +2079,94 @@ app.use((err, req, res, next) => {
 });
 
 
- // ============================================================
- // STUDY PLANNER
- // ============================================================
+// ============================================================
+// STUDY PLANNER
+// ============================================================
 
- // Get all study sessions for the logged-in student.
- app.get("/study-sessions", requireStudent, asyncRoute(async (req, res) => {
+// Get all study sessions for the logged-in student.
+app.get("/study-sessions", requireStudent, asyncRoute(async (req, res) => {
 
-     const sessions = await dbAll(
-         `SELECT * FROM StudySessions
+    const sessions = await dbAll(
+        `SELECT * FROM StudySessions
           WHERE UserID = ?
           ORDER BY StudyDate, StartTime`,
-         [req.session.userId]
-     );
+        [req.session.userId]
+    );
 
-     res.json({ sessions });
- }));
+    res.json({ sessions });
+}));
 
- // Add a new study session.
- app.post("/study-sessions", requireStudent, asyncRoute(async (req, res) => {
+// Add a new study session.
+app.post("/study-sessions", requireStudent, asyncRoute(async (req, res) => {
 
-     const { moduleName, studyDate, startTime, duration } = req.body;
+    const { moduleName, studyDate, startTime, duration } = req.body;
 
-     if (!moduleName || !studyDate || !startTime || !duration) {
-         return res.status(400).json({ message: "Please complete all fields." });
-     }
+    if (!moduleName || !studyDate || !startTime || !duration) {
+        return res.status(400).json({ message: "Please complete all fields." });
+    }
 
-     await dbRun(
-         `INSERT INTO StudySessions
+    await dbRun(
+        `INSERT INTO StudySessions
           (UserID, ModuleName, StudyDate, StartTime, Duration)
           VALUES (?, ?, ?, ?, ?)`,
-         [req.session.userId, moduleName, studyDate, startTime, duration]
-     );
+        [req.session.userId, moduleName, studyDate, startTime, duration]
+    );
 
-     res.json({ message: "Study session added successfully!" });
- }));
+    res.json({ message: "Study session added successfully!" });
+}));
 
- // Update an existing study session.
- app.put("/study-sessions/:id", requireStudent, asyncRoute(async (req, res) => {
+// Update an existing study session.
+app.put("/study-sessions/:id", requireStudent, asyncRoute(async (req, res) => {
 
-     const { moduleName, studyDate, startTime, duration, completed } = req.body;
+    const { moduleName, studyDate, startTime, duration, completed } = req.body;
 
-     const session = await dbGet(
-         "SELECT * FROM StudySessions WHERE SessionID = ? AND UserID = ?",
-         [req.params.id, req.session.userId]
-     );
+    const session = await dbGet(
+        "SELECT * FROM StudySessions WHERE SessionID = ? AND UserID = ?",
+        [req.params.id, req.session.userId]
+    );
 
-     if (!session) {
-         return res.status(404).json({ message: "Study session not found." });
-     }
+    if (!session) {
+        return res.status(404).json({ message: "Study session not found." });
+    }
 
-     const updatedModule = moduleName ?? session.ModuleName;
-     const updatedDate = studyDate ?? session.StudyDate;
-     const updatedTime = startTime ?? session.StartTime;
-     const updatedDuration = duration ?? session.Duration;
-     const updatedCompleted = completed ?? session.Completed;
+    const updatedModule = moduleName ?? session.ModuleName;
+    const updatedDate = studyDate ?? session.StudyDate;
+    const updatedTime = startTime ?? session.StartTime;
+    const updatedDuration = duration ?? session.Duration;
+    const updatedCompleted = completed ?? session.Completed;
 
-     await dbRun(
-         `UPDATE StudySessions
+    await dbRun(
+        `UPDATE StudySessions
           SET ModuleName = ?, StudyDate = ?, StartTime = ?,
               Duration = ?, Completed = ?
           WHERE SessionID = ? AND UserID = ?`,
-         [
-             updatedModule,
-             updatedDate,
-             updatedTime,
-             updatedDuration,
-             updatedCompleted,
-             req.params.id,
-             req.session.userId
-         ]
-     );
+        [
+            updatedModule,
+            updatedDate,
+            updatedTime,
+            updatedDuration,
+            updatedCompleted,
+            req.params.id,
+            req.session.userId
+        ]
+    );
 
-     res.json({ message: "Study session updated successfully!" });
- }));
+    res.json({ message: "Study session updated successfully!" });
+}));
 
- // Delete a study session.
- app.delete("/study-sessions/:id", requireStudent, asyncRoute(async (req, res) => {
+// Delete a study session.
+app.delete("/study-sessions/:id", requireStudent, asyncRoute(async (req, res) => {
 
-     const result = await dbRun(
-         "DELETE FROM StudySessions WHERE SessionID = ? AND UserID = ?",
-         [req.params.id, req.session.userId]
-     );
+    const result = await dbRun(
+        "DELETE FROM StudySessions WHERE SessionID = ? AND UserID = ?",
+        [req.params.id, req.session.userId]
+    );
 
-     if (result.changes === 0) {
-         return res.status(404).json({ message: "Study session not found." });
-     }
-     res.json({ message: "Study session deleted successfully!" });
- }));
+    if (result.changes === 0) {
+        return res.status(404).json({ message: "Study session not found." });
+    }
+    res.json({ message: "Study session deleted successfully!" });
+}));
 
 
 // ============================================================

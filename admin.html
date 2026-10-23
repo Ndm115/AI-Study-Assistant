@@ -8,6 +8,7 @@
     <title>Admin Dashboard - Marco AI Study Assistant</title>
 
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body class="admin-page">
@@ -107,6 +108,36 @@
                     <p id="adminTutorQuestions">0</p>
                 </div>
 
+                <!-- STUDY PLANNER STATISTICS -->
+                <div class="card admin-stat-card">
+                    <h3>Total Study Sessions</h3>
+                    <p id="totalStudySessions">0</p>
+                </div>
+
+                <div class="card admin-stat-card">
+                    <h3>Completed Study Sessions</h3>
+                    <p id="completedStudySessions">0</p>
+                </div>
+
+                <div class="card admin-stat-card">
+                    <h3>Study Completion Rate</h3>
+                    <p id="studyCompletionRate">0%</p>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- QUIZ PERFORMANCE CHART -->
+        <section class="admin-section">
+
+            <div class="admin-section-heading">
+                <h2>Quiz Performance by Module</h2>
+                <p>Average quiz scores across all students for each module.</p>
+            </div>
+
+            <div class="admin-table-card" style="padding: 20px;">
+                <canvas id="quizPerformanceChart"></canvas>
             </div>
 
         </section>
@@ -280,7 +311,6 @@
 
     </div>
 
-
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
@@ -288,12 +318,12 @@
 
     <script src="script.js"></script>
 
-
     <script>
         // Load administrator data when the page is ready.
         window.addEventListener("load", function () {
             loadAdminDashboard();
             loadAdminFeedback();
+            loadQuizPerformanceChart();
         });
     </script>
 
