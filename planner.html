@@ -1,0 +1,121 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Study Planner - Marco</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="logo-box">
+            <div class="logo-circle">M</div>
+            <h2>Marco AI Tutor</h2>
+        </div>
+
+        <a href="dashboard.html">Dashboard</a>
+        <a href="upload.html">Upload Notes</a>
+        <a href="summary.html">Summary</a>
+        <a href="quiz.html">Quiz Generator</a>
+        <a href="flashcards.html">AI Flashcards</a>
+        <a href="planner.html" class="active">Study Planner</a>
+        <a href="tutor.html">AI Tutor</a>
+        <a href="feedback.html">Feedback</a>
+        <a href="#" onclick="logoutUser()">Logout</a>
+
+        <button type="button" class="theme-toggle" onclick="toggleTheme()">
+            Toggle Theme
+        </button>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main">
+
+        <h1>Weekly Study Planner</h1>
+        <p class="subtitle">
+            Organize your study sessions and track your weekly progress.
+        </p>
+
+        <!-- ADD / EDIT STUDY SESSION -->
+        <div class="form-card">
+
+            <h2 id="plannerFormTitle">Add Study Session</h2>
+
+            <form id="studySessionForm" onsubmit="saveStudySession(event)">
+
+                <label for="plannerModule">Module</label>
+                <input
+                    type="text"
+                    id="plannerModule"
+                    placeholder="e.g. Artificial Intelligence"
+                    maxlength="100"
+                    required
+                >
+
+                <label for="plannerDate">Study Date</label>
+                <input type="date" id="plannerDate" required>
+
+                <label for="plannerTime">Start Time</label>
+                <input type="time" id="plannerTime" required>
+
+                <label for="plannerDuration">Duration (minutes)</label>
+                <input
+                    type="number"
+                    id="plannerDuration"
+                    min="1"
+                    max="1440"
+                    placeholder="e.g. 60"
+                    required
+                >
+
+                <button type="submit" id="plannerSaveButton">
+                    Add Session
+                </button>
+
+                <button
+                    type="button"
+                    id="plannerCancelButton"
+                    onclick="cancelStudySessionEdit()"
+                    style="display: none;"
+                >
+                    Cancel Edit
+                </button>
+
+            </form>
+
+            <p id="plannerMessage"></p>
+        </div>
+
+        <!-- WEEK NAVIGATION -->
+        <div class="section-header">
+            <h2>Your Weekly Schedule</h2>
+            <p>View and manage your planned study sessions.</p>
+        </div>
+
+        <div class="planner-week-controls">
+            <button type="button" onclick="changePlannerWeek(-1)">
+                Previous Week
+            </button>
+
+            <h3 id="plannerWeekLabel">Current Week</h3>
+
+            <button type="button" onclick="changePlannerWeek(1)">
+                Next Week
+            </button>
+
+            <button type="button" onclick="goToCurrentPlannerWeek()">
+                This Week
+            </button>
+        </div>
+
+        <!-- WEEKLY TIMETABLE -->
+        <div id="plannerWeek" class="planner-week">
+            <p>Loading study sessions...</p>
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

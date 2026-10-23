@@ -3955,5 +3955,292 @@ function downloadQuizPDF() {
      loadFlashcardChapters();
  }
 
+ 
+ // ============================================================
+ // STUDY PLANNER
+ // ============================================================
+
+ let plannerSessions = [];
+ let plannerWeekDate = new Date();
+ let editingSessionId = null;
+
+ // Format a date as YYYY-MM-DD using local time.
+ function plannerDateString(date) {
+     const year = date.getFullYear();
+     const month = String(date.getMonth() + 1).padStart(2, "0");
+     const day = String(date.getDate()).padStart(2, "0");
+     return `${year}-${month}-${day}`;
+ }
+
+ // Find the Monday of the selected week.
+ function plannerMonday() {
+     const monday = new Date(plannerWeekDate);
+     const day = monday.getDay();
+     monday.setDate(monday.getDate() - ((day + 6) % 7));
+     monday.setHours(12, 0, 0, 0);
+     return monday;
+ }
+
+ // Load the logged-in student's saved sessions.
+ async function loadStudySessions() {
+     const message = document.getElementById("plannerMessage");
+
+     try {
+         const response = await fetch("/study-sessions");
+         const data = await response.json();
+
+         if (!response.ok) {
+             throw new Error(data.message || "Unable to load sessions.");
+         }
+
+         plannerSessions = data.sessions;
+         displayPlannerWeek();
+
+     } catch (error) {
+         message.textContent = error.message;
+     }
+ }
+
+ // Save a new session or update an existing one.
+ async function saveStudySession(event) {
+     event.preventDefault();
+
+     const message = document.getElementById("plannerMessage");
+
+     const session = {
+         moduleName: document.getElementById("plannerModule").value.trim(),
+         studyDate: document.getElementById("plannerDate").value,
+         startTime: document.getElementById("plannerTime").value,
+         duration: Number(document.getElementById("plannerDuration").value)
+     };
+
+     if (!session.moduleName || !session.studyDate ||
+         !session.startTime || !Number.isInteger(session.duration) ||
+         session.duration < 1 || session.duration > 1440) {
+         message.textContent = "Please enter valid session details.";
+         return;
+     }
+
+     const isEditing = editingSessionId !== null;
+
+     try {
+         const response = await fetch(
+             isEditing ? `/study-sessions/${editingSessionId}` : "/study-sessions",
+             {
+                 method: isEditing ? "PUT" : "POST",
+                 headers: { "Content-Type": "application/json" },
+                 body: JSON.stringify(session)
+             }
+         );
+
+         const data = await response.json();
+
+         if (!response.ok) {
+             throw new Error(data.message || "Unable to save session.");
+         }
+
+         cancelStudySessionEdit();
+
+         // Show the week containing the saved session.
+         plannerWeekDate = new Date(session.studyDate + "T12:00:00");
+
+         await loadStudySessions();
+         message.textContent = data.message;
+
+     } catch (error) {
+         message.textContent = error.message;
+     }
+ }
+
+ // Fill the form with an existing session's details.
+ function editStudySession(id) {
+     const session = plannerSessions.find(s => s.SessionID === id);
+     if (!session) return;
+
+     editingSessionId = id;
+
+     document.getElementById("plannerModule").value = session.ModuleName;
+     document.getElementById("plannerDate").value = session.StudyDate;
+     document.getElementById("plannerTime").value = session.StartTime;
+     document.getElementById("plannerDuration").value = session.Duration;
+
+     document.getElementById("plannerFormTitle").textContent = "Edit Study Session";
+     document.getElementById("plannerSaveButton").textContent = "Save Changes";
+     document.getElementById("plannerCancelButton").style.display = "inline-block";
+
+     document.getElementById("studySessionForm").scrollIntoView({
+         behavior: "smooth"
+     });
+ }
+
+ // Reset the form after editing or saving.
+ function cancelStudySessionEdit() {
+     editingSessionId = null;
+
+     document.getElementById("studySessionForm").reset();
+     document.getElementById("plannerFormTitle").textContent = "Add Study Session";
+     document.getElementById("plannerSaveButton").textContent = "Add Session";
+     document.getElementById("plannerCancelButton").style.display = "none";
+ }
+
+ // Mark a session as complete or incomplete.
+ async function toggleStudySession(id) {
+     const session = plannerSessions.find(s => s.SessionID === id);
+     if (!session) return;
+
+     try {
+         const response = await fetch(`/study-sessions/${id}`, {
+             method: "PUT",
+             headers: { "Content-Type": "application/json" },
+             body: JSON.stringify({
+                 completed: session.Completed ? 0 : 1
+             })
+         });
+
+         const data = await response.json();
+         if (!response.ok) throw new Error(data.message);
+
+         await loadStudySessions();
+
+     } catch (error) {
+         document.getElementById("plannerMessage").textContent = error.message;
+     }
+ }
+
+ // Delete a session after confirmation.
+ async function deleteStudySession(id) {
+     if (!confirm("Delete this study session?")) return;
+
+     try {
+         const response = await fetch(`/study-sessions/${id}`, {
+             method: "DELETE"
+         });
+
+         const data = await response.json();
+         if (!response.ok) throw new Error(data.message);
+
+         await loadStudySessions();
+         document.getElementById("plannerMessage").textContent = data.message;
+
+     } catch (error) {
+         document.getElementById("plannerMessage").textContent = error.message;
+     }
+ }
+
+ // Move forward or backward by one week.
+ function changePlannerWeek(amount) {
+     plannerWeekDate.setDate(plannerWeekDate.getDate() + amount * 7);
+     displayPlannerWeek();
+ }
+
+ // Return to the current week.
+ function goToCurrentPlannerWeek() {
+     plannerWeekDate = new Date();
+     displayPlannerWeek();
+ }
+
+ // Display seven days, Monday through Sunday.
+ function displayPlannerWeek() {
+     const container = document.getElementById("plannerWeek");
+     if (!container) return;
+
+     container.innerHTML = "";
+
+     const monday = plannerMonday();
+     const sunday = new Date(monday);
+     sunday.setDate(sunday.getDate() + 6);
+
+     document.getElementById("plannerWeekLabel").textContent =
+         `${monday.toLocaleDateString("en-GB", {
+             day: "numeric", month: "short"
+         })} - ${sunday.toLocaleDateString("en-GB", {
+             day: "numeric", month: "short", year: "numeric"
+         })}`;
+
+     for (let i = 0; i < 7; i++) {
+         const date = new Date(monday);
+         date.setDate(monday.getDate() + i);
+
+         const dateString = plannerDateString(date);
+
+         const daySessions = plannerSessions.filter(
+             session => session.StudyDate === dateString
+         );
+
+         const dayCard = document.createElement("div");
+         dayCard.className = "planner-day";
+
+         const heading = document.createElement("h3");
+         heading.textContent = date.toLocaleDateString("en-GB", {
+             weekday: "long",
+             day: "numeric",
+             month: "short"
+         });
+
+         dayCard.appendChild(heading);
+
+         if (daySessions.length === 0) {
+             const empty = document.createElement("p");
+             empty.textContent = "No sessions planned.";
+             dayCard.appendChild(empty);
+         }
+
+         daySessions.forEach(session => {
+             const item = document.createElement("div");
+             item.className = "planner-session";
+
+             if (session.Completed) {
+                 item.classList.add("planner-completed");
+             }
+
+             const title = document.createElement("h4");
+             title.textContent = session.ModuleName;
+
+             const details = document.createElement("p");
+             details.textContent =
+                 `${session.StartTime} | ${session.Duration} minutes`;
+
+             const status = document.createElement("p");
+             status.textContent = session.Completed
+                 ? "Completed"
+                 : "Not completed";
+
+             const completeButton = document.createElement("button");
+             completeButton.textContent = session.Completed
+                 ? "Mark Incomplete"
+                 : "Mark Complete";
+             completeButton.onclick = () =>
+                 toggleStudySession(session.SessionID);
+
+             const editButton = document.createElement("button");
+             editButton.textContent = "Edit";
+             editButton.onclick = () =>
+                 editStudySession(session.SessionID);
+
+             const deleteButton = document.createElement("button");
+             deleteButton.textContent = "Delete";
+             deleteButton.onclick = () =>
+                 deleteStudySession(session.SessionID);
+
+             item.appendChild(title);
+             item.appendChild(details);
+             item.appendChild(status);
+             item.appendChild(completeButton);
+             item.appendChild(editButton);
+             item.appendChild(deleteButton);
+
+             dayCard.appendChild(item);
+         });
+
+         container.appendChild(dayCard);
+     }
+ }
+
+ // Start the planner only on planner.html.
+ if (document.getElementById("plannerWeek")) {
+     loadStudySessions();
+ }
+
+
 
 

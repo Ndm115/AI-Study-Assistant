@@ -139,6 +139,7 @@ const frontendFiles = [
     "summary.html",
     "quiz.html",
     "flashcards.html",
+    "planner.html",
     "tutor.html",
     "feedback.html",
     "script.js",
@@ -2033,6 +2034,97 @@ app.use((err, req, res, next) => {
         message: "An unexpected server error occurred."
     });
 });
+
+
+ // ============================================================
+ // STUDY PLANNER
+ // ============================================================
+
+ // Get all study sessions for the logged-in student.
+ app.get("/study-sessions", requireStudent, asyncRoute(async (req, res) => {
+
+     const sessions = await dbAll(
+         `SELECT * FROM StudySessions
+          WHERE UserID = ?
+          ORDER BY StudyDate, StartTime`,
+         [req.session.userId]
+     );
+
+     res.json({ sessions });
+ }));
+
+ // Add a new study session.
+ app.post("/study-sessions", requireStudent, asyncRoute(async (req, res) => {
+
+     const { moduleName, studyDate, startTime, duration } = req.body;
+
+     if (!moduleName || !studyDate || !startTime || !duration) {
+         return res.status(400).json({ message: "Please complete all fields." });
+     }
+
+     await dbRun(
+         `INSERT INTO StudySessions
+          (UserID, ModuleName, StudyDate, StartTime, Duration)
+          VALUES (?, ?, ?, ?, ?)`,
+         [req.session.userId, moduleName, studyDate, startTime, duration]
+     );
+
+     res.json({ message: "Study session added successfully!" });
+ }));
+
+ // Update an existing study session.
+ app.put("/study-sessions/:id", requireStudent, asyncRoute(async (req, res) => {
+
+     const { moduleName, studyDate, startTime, duration, completed } = req.body;
+
+     const session = await dbGet(
+         "SELECT * FROM StudySessions WHERE SessionID = ? AND UserID = ?",
+         [req.params.id, req.session.userId]
+     );
+
+     if (!session) {
+         return res.status(404).json({ message: "Study session not found." });
+     }
+
+     const updatedModule = moduleName ?? session.ModuleName;
+     const updatedDate = studyDate ?? session.StudyDate;
+     const updatedTime = startTime ?? session.StartTime;
+     const updatedDuration = duration ?? session.Duration;
+     const updatedCompleted = completed ?? session.Completed;
+
+     await dbRun(
+         `UPDATE StudySessions
+          SET ModuleName = ?, StudyDate = ?, StartTime = ?,
+              Duration = ?, Completed = ?
+          WHERE SessionID = ? AND UserID = ?`,
+         [
+             updatedModule,
+             updatedDate,
+             updatedTime,
+             updatedDuration,
+             updatedCompleted,
+             req.params.id,
+             req.session.userId
+         ]
+     );
+
+     res.json({ message: "Study session updated successfully!" });
+ }));
+
+ // Delete a study session.
+ app.delete("/study-sessions/:id", requireStudent, asyncRoute(async (req, res) => {
+
+     const result = await dbRun(
+         "DELETE FROM StudySessions WHERE SessionID = ? AND UserID = ?",
+         [req.params.id, req.session.userId]
+     );
+
+     if (result.changes === 0) {
+         return res.status(404).json({ message: "Study session not found." });
+     }
+     res.json({ message: "Study session deleted successfully!" });
+ }));
+
 
 // ============================================================
 // START SERVER

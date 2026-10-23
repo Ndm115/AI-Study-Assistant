@@ -1407,3 +1407,110 @@ label[for="quizType"] {
         flex-wrap: wrap;
     }
 }
+
+
+/* ============================================================
+   STUDY PLANNER
+   ============================================================ */
+
+/* Weekly navigation */
+.planner-week-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin: 25px 0;
+}
+
+#plannerWeekLabel {
+    color: var(--text);
+    text-align: center;
+}
+
+/* Seven-day weekly layout */
+.planner-week {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+/* Individual day */
+.planner-day {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    padding: 20px;
+    min-width: 0;
+}
+
+.planner-day h3 {
+    color: var(--text);
+    margin-bottom: 15px;
+}
+
+.planner-day > p {
+    color: var(--muted);
+}
+
+/* Individual study session */
+.planner-session {
+    background: var(--soft);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 15px;
+    margin-top: 12px;
+}
+
+.planner-session h4 {
+    color: var(--text);
+    margin-bottom: 8px;
+    overflow-wrap: anywhere;
+}
+
+.planner-session p {
+    color: var(--muted);
+    margin-bottom: 8px;
+}
+
+/* Completed sessions */
+.planner-completed {
+    border-color: var(--blue);
+    opacity: 0.75;
+}
+
+.planner-completed h4 {
+    text-decoration: line-through;
+}
+
+/* Session buttons */
+.planner-session button {
+    margin: 5px 5px 0 0;
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+/* Planner form inputs */
+#studySessionForm input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0 18px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--card);
+    color: var(--text);
+    box-sizing: border-box;
+}
+
+/* Smaller screens */
+@media (max-width: 600px) {
+    .planner-week {
+        grid-template-columns: 1fr;
+    }
+
+    .planner-week-controls {
+        flex-direction: column;
+    }
+}
+
