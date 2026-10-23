@@ -1,0 +1,97 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>AI Flashcards - Marco</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <div class="logo-box">
+            <div class="logo-circle">M</div>
+            <h2>Marco AI Tutor</h2>
+        </div>
+
+        <a href="dashboard.html">Dashboard</a>
+        <a href="upload.html">Upload Notes</a>
+        <a href="summary.html">Summary</a>
+        <a href="quiz.html">Quiz Generator</a>
+        <a href="flashcards.html" class="active">AI Flashcards</a>
+        <a href="tutor.html">AI Tutor</a>
+        <a href="feedback.html">Feedback</a>
+        <a href="#" onclick="logoutUser()">Logout</a>
+
+        <button type="button" class="theme-toggle" onclick="toggleTheme()">
+            Toggle Theme
+        </button>
+    </div>
+
+    <div class="main">
+
+        <h1>AI Flashcards</h1>
+        <p class="subtitle">
+            Generate interactive revision flashcards from your saved study material.
+        </p>
+
+        <div class="form-card">
+
+            <h2 id="flashcardModule">No study material selected</h2>
+
+            <label for="flashcardChapter">Select Chapter</label>
+            <select id="flashcardChapter">
+                <option value="all">All Chapters</option>
+            </select>
+
+            <button type="button" id="generateFlashcardsButton"
+                    onclick="generateFlashcards()">
+                Generate Flashcards
+            </button>
+
+            <p id="flashcardMessage"></p>
+
+        </div>
+
+        <div id="flashcardSection" style="display: none; margin-top: 30px;">
+
+            <h2 id="flashcardTitle">Revision Flashcards</h2>
+
+            <p id="flashcardCounter">Flashcard 1 of 10</p>
+
+            <!-- Click to flip between question and answer -->
+            <div id="flashcard" class="flashcard"
+                 onclick="flipFlashcard()"
+                 role="button" tabindex="0"
+                 onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); flipFlashcard(); }">
+
+                <p id="flashcardSide">Question</p>
+
+                <h2 id="flashcardText"></h2>
+
+                <p>Click to flip</p>
+
+            </div>
+
+            <div class="flashcard-controls">
+
+                <button type="button" onclick="previousFlashcard()">
+                    Previous
+                </button>
+
+                <button type="button" onclick="nextFlashcard()">
+                    Next
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>

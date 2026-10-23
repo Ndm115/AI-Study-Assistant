@@ -1324,3 +1324,86 @@ label[for="quizType"] {
 .admin-summary-content hr {
     margin: 20px 0;
 }
+
+
+/* ============================================================
+   AI FLASHCARDS
+   ============================================================ */
+
+/* Chapter dropdown */
+#flashcardChapter {
+    width: 100%;
+    padding: 14px;
+    margin: 15px 0;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card);
+    color: var(--text);
+}
+
+/* Flashcard counter */
+#flashcardCounter {
+    text-align: center;
+    margin: 20px 0;
+    color: var(--muted);
+}
+
+/* Flashcard appearance */
+.flashcard {
+    background: var(--card);
+    border: 2px solid var(--blue);
+    border-radius: 20px;
+    padding: 50px 30px;
+    min-height: 280px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    transition: 0.3s;
+}
+
+/* Hover effect */
+.flashcard:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 15px 35px rgba(37, 99, 235, 0.2);
+}
+
+/* Question / Answer label */
+#flashcardSide {
+    color: var(--blue);
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+/* Flashcard text */
+#flashcardText {
+    color: var(--text);
+    line-height: 1.6;
+    margin-bottom: 20px;
+    overflow-wrap: anywhere;
+}
+
+/* Previous and Next buttons */
+.flashcard-controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 25px;
+}
+
+/* Smaller screens */
+@media (max-width: 600px) {
+    .flashcard {
+        padding: 30px 20px;
+        min-height: 230px;
+    }
+
+    .flashcard-controls {
+        flex-wrap: wrap;
+    }
+}

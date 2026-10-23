@@ -3795,4 +3795,165 @@ function downloadQuizPDF() {
 }
 
 
+ // ============================================================
+ // AI FLASHCARDS
+ // ============================================================
+
+ let flashcards = [];
+ let flashcardIndex = 0;
+ let flashcardFlipped = false;
+
+ // Load available chapters for the selected study material.
+ async function loadFlashcardChapters() {
+
+     const chapterSelect = document.getElementById("flashcardChapter");
+
+     // Only run on the Flashcards page.
+     if (!chapterSelect) return;
+
+     const noteId = localStorage.getItem("currentNoteId");
+     const moduleName = localStorage.getItem("currentModuleName");
+
+     const moduleTitle = document.getElementById("flashcardModule");
+     moduleTitle.textContent = moduleName || "No study material selected";
+
+     chapterSelect.innerHTML = '<option value="all">All Chapters</option>';
+
+     if (!noteId) {
+         document.getElementById("flashcardMessage").textContent =
+             "Please select study material from your dashboard first.";
+         return;
+     }
+
+     try {
+         // Reuse Marco's existing chapter detection endpoint.
+         const response = await fetch(
+             `http://localhost:3000/chapters/${noteId}`
+         );
+
+         const data = await response.json();
+
+         if (!response.ok) {
+             throw new Error(data.message);
+         }
+
+         data.chapters.forEach(chapter => {
+             const option = document.createElement("option");
+             option.value = chapter.index;
+             option.textContent = chapter.title;
+             chapterSelect.appendChild(option);
+         });
+
+     } catch (error) {
+         console.error(error);
+         document.getElementById("flashcardMessage").textContent =
+             "Unable to load chapters.";
+     }
+ }
+
+ // Ask Gemini to generate 10 flashcards.
+ async function generateFlashcards() {
+
+     const noteId = localStorage.getItem("currentNoteId");
+     const chapter = document.getElementById("flashcardChapter").value;
+     const message = document.getElementById("flashcardMessage");
+     const button = document.getElementById("generateFlashcardsButton");
+
+     if (!noteId) {
+         message.textContent = "Please select study material first.";
+         return;
+     }
+
+     button.disabled = true;
+     message.textContent = "Generating flashcards. Please wait...";
+
+     try {
+         const response = await fetch(
+             "http://localhost:3000/generate-flashcards",
+             {
+                 method: "POST",
+                 headers: {
+                     "Content-Type": "application/json"
+                 },
+                 body: JSON.stringify({ noteId, chapter })
+             }
+         );
+
+         const data = await response.json();
+
+         if (!response.ok) {
+             throw new Error(data.message);
+         }
+
+         flashcards = data.flashcards;
+         flashcardIndex = 0;
+         flashcardFlipped = false;
+
+         document.getElementById("flashcardTitle").textContent =
+             data.moduleName + " - " + data.chapterTitle;
+
+         document.getElementById("flashcardSection").style.display = "block";
+
+         showFlashcard();
+
+         message.textContent = "Flashcards generated successfully!";
+
+     } catch (error) {
+         console.error(error);
+         message.textContent = error.message || "Unable to generate flashcards.";
+
+     } finally {
+         button.disabled = false;
+     }
+ }
+
+ // Display the current question or answer.
+ function showFlashcard() {
+
+     if (flashcards.length === 0) return;
+
+     const card = flashcards[flashcardIndex];
+
+     document.getElementById("flashcardCounter").textContent =
+         `Flashcard ${flashcardIndex + 1} of ${flashcards.length}`;
+
+     document.getElementById("flashcardSide").textContent =
+         flashcardFlipped ? "Answer" : "Question";
+
+     document.getElementById("flashcardText").textContent =
+         flashcardFlipped ? card.answer : card.question;
+ }
+
+ // Flip the card between question and answer.
+ function flipFlashcard() {
+     if (flashcards.length === 0) return;
+
+     flashcardFlipped = !flashcardFlipped;
+     showFlashcard();
+ }
+
+ // Move to the next flashcard.
+ function nextFlashcard() {
+     if (flashcardIndex >= flashcards.length - 1) return;
+
+     flashcardIndex++;
+     flashcardFlipped = false;
+     showFlashcard();
+ }
+
+ // Move to the previous flashcard.
+ function previousFlashcard() {
+     if (flashcardIndex <= 0) return;
+
+     flashcardIndex--;
+     flashcardFlipped = false;
+     showFlashcard();
+ }
+
+ // Load chapters when the Flashcards page opens.
+ if (document.getElementById("flashcardChapter")) {
+     loadFlashcardChapters();
+ }
+
+
 

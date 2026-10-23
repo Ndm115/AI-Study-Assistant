@@ -138,6 +138,7 @@ const frontendFiles = [
     "upload.html",
     "summary.html",
     "quiz.html",
+    "flashcards.html",
     "tutor.html",
     "feedback.html",
     "script.js",
@@ -808,6 +809,124 @@ function getSelectedContent(noteContent, chapter) {
         title: selectedChapter.title
     };
 }
+
+
+ // ============================================================
+ // GENERATE AI FLASHCARDS
+ // ============================================================
+
+ app.post(
+     "/generate-flashcards",
+     requireStudent,
+     asyncRoute(async (req, res) => {
+
+         const { noteId, chapter = "all" } = req.body;
+
+         // Check that study material was selected.
+         if (!noteId) {
+             return res.status(400).json({
+                 message: "Please select study material first."
+             });
+         }
+
+         // Only allow students to use their own notes.
+         const note = await getOwnedNote(
+             noteId,
+             req.session.userId
+         );
+
+         if (!note) {
+             return res.status(404).json({
+                 message: "Study material not found."
+             });
+         }
+
+         // Reuse Marco's existing chapter selection.
+         const selection = getSelectedContent(
+             note.NoteContent,
+             chapter
+         );
+
+         if (!selection) {
+             return res.status(400).json({
+                 message: "Invalid or empty chapter selected."
+             });
+         }
+
+         // Ask Gemini to generate flashcard questions and answers.
+         const prompt = `
+ You are an AI study assistant for university students.
+
+ Generate exactly 10 useful revision flashcards
+ using ONLY the study notes below.
+
+ Each flashcard must contain:
+ - A clear question
+ - A short but informative answer
+
+ Cover important concepts from the selected material.
+ Do not introduce information that is not in the notes.
+
+ Return ONLY valid JSON in this format:
+ {
+   "flashcards": [
+     {
+       "question": "Example question?",
+       "answer": "Example answer."
+     }
+   ]
+ }
+
+ Module: ${note.ModuleName}
+ Selected Chapter: ${selection.title}
+
+ Study Notes:
+ ${selection.content}
+         `;
+
+         const response = await generateWithGemini(prompt);
+
+         // Remove Markdown code fences if Gemini includes them.
+         const cleaned = String(response.text || "")
+             .replace(/```json/gi, "")
+             .replace(/```/g, "")
+             .trim();
+
+         let result;
+
+         try {
+             result = JSON.parse(cleaned);
+         } catch (error) {
+             return res.status(502).json({
+                 message: "Gemini returned an invalid flashcard format. Please try again."
+             });
+         }
+
+         // Validate the generated flashcards.
+         if (
+             !Array.isArray(result.flashcards) ||
+             result.flashcards.length !== 10 ||
+             !result.flashcards.every(card =>
+                 typeof card.question === "string" &&
+                 card.question.trim() &&
+                 typeof card.answer === "string" &&
+                 card.answer.trim()
+             )
+         ) {
+             return res.status(502).json({
+                 message: "Flashcards could not be generated correctly. Please try again."
+             });
+         }
+
+         res.json({
+             message: "Flashcards generated successfully!",
+             moduleName: note.ModuleName,
+             chapterTitle: selection.title,
+             flashcards: result.flashcards
+         });
+     })
+ );
+
 
 // ============================================================
 // GENERATE AI SUMMARY
